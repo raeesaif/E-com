@@ -1,0 +1,2 @@
+import { createFileRoute } from "@tanstack/react-router"; import { PeoplePage } from "@/components/marketplace/DashboardPages";
+export const Route = createFileRoute("/admin/customers")({ head: () => ({ meta: [{ title: "Customers — Marketly Admin" }, { name: "description", content: "View customer accounts and order activity." }, { property: "og:title", content: "Customers — Marketly Admin" }, { property: "og:description", content: "View customer accounts and order activity." }] }), component: () => <PeoplePage type="customers" /> });

@@ -1,0 +1,2 @@
+import { createFileRoute } from "@tanstack/react-router"; import { OrdersManagementPage } from "@/components/marketplace/DashboardPages";
+export const Route = createFileRoute("/admin/orders")({ head: () => ({ meta: [{ title: "Orders — Marketly Admin" }, { name: "description", content: "View marketplace-wide orders and fulfillment status." }, { property: "og:title", content: "Orders — Marketly Admin" }, { property: "og:description", content: "View marketplace-wide orders and fulfillment status." }] }), component: () => <OrdersManagementPage admin /> });
