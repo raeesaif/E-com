@@ -44,6 +44,11 @@ export interface ResetPasswordPayload {
   newPassword: string;
 }
 
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export const authApi = {
   register: (payload: RegisterPayload) =>
     apiRequest<ApiEnvelope<AuthUser>>("/auth/register", {
@@ -74,5 +79,21 @@ export const authApi = {
     apiRequest<ApiEnvelope<AuthUser>>("/auth/reset-password", {
       method: "POST",
       body: JSON.stringify(payload),
+    }),
+  changePassword: (payload: ChangePasswordPayload, accessToken: string) =>
+    apiRequest<ApiEnvelope<null>>("/auth/change-password", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify(payload),
+    }),
+  getMe: (accessToken: string) =>
+    apiRequest<ApiEnvelope<AuthUser>>("/auth/me", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }),
+  logout: (accessToken: string) =>
+    apiRequest<ApiEnvelope<null>>("/auth/logout", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
     }),
 };

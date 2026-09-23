@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ImagePlus, Trash2, Upload } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -8,8 +9,98 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { categories, finalPrice, money, stockStatus, type Order, type OrderStatus, type Product } from "@/lib/marketplace";
 import { ProductImage, OrderStatusBadge } from "./Common";
+import { authApi } from "@/api/auth.api";
+import { ApiError } from "@/api/client";
+import { PasswordInput } from "./AuthField";
 
 export function ConfirmDialog({ trigger, title, description, onConfirm }: { trigger: React.ReactNode; title: string; description: string; onConfirm: () => void }) { const [open, setOpen] = useState(false); return <Dialog open={open} onOpenChange={setOpen}><DialogTrigger asChild>{trigger}</DialogTrigger><DialogContent><DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>{description}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button variant="destructive" onClick={() => { onConfirm(); setOpen(false); }}>Delete</Button></DialogFooter></DialogContent></Dialog>; }
+
+export function ChangePasswordDialog({ trigger, accessToken }: { trigger: React.ReactNode; accessToken: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  useEffect(() => {
+    if (open) {
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+  }, [open]);
+  const submit = async () => {
+    if (!accessToken) {
+      toast.error("You need to be signed in to change your password.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New password and confirm password do not match.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await authApi.changePassword({ currentPassword, newPassword }, accessToken);
+      toast.success("Password changed successfully.");
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not change password.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Change password</DialogTitle>
+          <DialogDescription>Enter your current password and choose a new one.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4">
+          <div>
+            <Label htmlFor="current-password">Current password</Label>
+            <PasswordInput
+              id="current-password"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="new-password">New password</Label>
+            <PasswordInput
+              id="new-password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="confirm-password">Confirm password</Label>
+            <PasswordInput
+              id="confirm-password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            disabled={submitting || !currentPassword || !newPassword || !confirmPassword}
+            onClick={submit}
+          >
+            Change password
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function ProductDialog({ product, onSave, trigger }: { product?: Product; onSave: (product: Product) => void; trigger: React.ReactNode }) {
   const empty: Product = { id: `p-${Date.now()}`, name: "", seller: "North & Pine", category: categories[0] ?? "Electronics", description: "", price: 0, discount: 0, stock: 0, imagePosition: "0% 0%" }; const [open, setOpen] = useState(false); const [draft, setDraft] = useState(product ?? empty); const [preview, setPreview] = useState<string | null>(null);

@@ -1,13 +1,15 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { CartLine, Product, Role } from "@/lib/marketplace";
 import { products as seedProducts } from "@/lib/marketplace";
-import type { AuthUser } from "@/api/auth.api";
+import { authApi, type AuthUser } from "@/api/auth.api";
+import { ApiError } from "@/api/client";
 
 interface AppStateValue {
   role: Role | null;
   setRole: (role: Role | null) => void;
   user: AuthUser | null;
   accessToken: string | null;
+  hydrated: boolean;
   signIn: (user: AuthUser, tokens: { accessToken: string; refreshToken: string }) => void;
   signOut: () => void;
   cart: CartLine[];
@@ -29,20 +31,43 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     { productId: "p3", quantity: 1 },
   ]);
   const [products, setProducts] = useState(seedProducts);
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     const stored = window.localStorage.getItem("market-role") as Role | null;
     if (stored === "admin" || stored === "seller" || stored === "customer") setRoleState(stored);
     const storedUser = window.localStorage.getItem("market-user");
     const storedToken = window.localStorage.getItem("market-access-token");
-    if (storedUser && storedToken) {
-      try {
-        setUser(JSON.parse(storedUser) as AuthUser);
-        setAccessToken(storedToken);
-      } catch {
-        window.localStorage.removeItem("market-user");
-        window.localStorage.removeItem("market-access-token");
-      }
+    if (!storedUser || !storedToken) {
+      setHydrated(true);
+      return;
     }
+    try {
+      setUser(JSON.parse(storedUser) as AuthUser);
+      setAccessToken(storedToken);
+    } catch {
+      window.localStorage.removeItem("market-user");
+      window.localStorage.removeItem("market-access-token");
+      setHydrated(true);
+      return;
+    }
+    setHydrated(true);
+    authApi
+      .getMe(storedToken)
+      .then(({ data }) => {
+        setUser(data);
+        window.localStorage.setItem("market-user", JSON.stringify(data));
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) {
+          setUser(null);
+          setAccessToken(null);
+          window.localStorage.removeItem("market-user");
+          window.localStorage.removeItem("market-access-token");
+          window.localStorage.removeItem("market-refresh-token");
+          window.localStorage.removeItem("market-role");
+          setRoleState(null);
+        }
+      });
   }, []);
   const setRole = (next: Role | null) => {
     setRoleState(next);
@@ -58,6 +83,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setRole(nextUser.role);
   };
   const signOut = () => {
+    if (accessToken) authApi.logout(accessToken).catch(() => undefined);
     setUser(null);
     setAccessToken(null);
     window.localStorage.removeItem("market-user");
@@ -69,6 +95,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     () => ({
       role,
       setRole,
+      hydrated,
       user,
       accessToken,
       signIn,
@@ -98,7 +125,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         ),
       deleteProduct: (id) => setProducts((items) => items.filter((item) => item.id !== id)),
     }),
-    [role, user, accessToken, cart, products],
+    [role, user, accessToken, hydrated, cart, products],
   );
   return <AppState.Provider value={value}>{children}</AppState.Provider>;
 }

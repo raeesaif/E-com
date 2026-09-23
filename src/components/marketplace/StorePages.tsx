@@ -1,45 +1,697 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, CheckCircle2, CreditCard, PackageCheck, Search, ShieldCheck, ShoppingBag, SlidersHorizontal, Trash2, Truck } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  CreditCard,
+  PackageCheck,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  SlidersHorizontal,
+  Trash2,
+  Truck,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { categories, finalPrice, money, orders, products as seedProducts } from "@/lib/marketplace";
-import { BackLink, DiscountBadge, EmptyState, OrderStatusBadge, OrderStatusTimeline, PageHeader, Pagination, ProductGrid, ProductImage, ProductPrice, QuantityControl, SearchInput, StockBadge } from "./Common";
+import {
+  BackLink,
+  DiscountBadge,
+  EmptyState,
+  OrderStatusBadge,
+  OrderStatusTimeline,
+  PageHeader,
+  Pagination,
+  ProductGrid,
+  ProductImage,
+  ProductPrice,
+  QuantityControl,
+  SearchInput,
+  StockBadge,
+} from "./Common";
 import { useAppState } from "./AppState";
 import { Navbar } from "./Shells";
 
 export function HomePage() {
-  const featured = seedProducts.slice(0, 4); const discounted = seedProducts.filter((p) => p.discount > 0).slice(0, 4);
-  return <><Navbar /><main><section className="border-b bg-surface"><div className="page-shell grid min-h-[520px] items-center gap-10 py-14 lg:grid-cols-[1.05fr_.95fr]"><div><span className="inline-flex items-center rounded-full border bg-card px-3 py-1 text-xs font-bold text-primary">CURATED INDEPENDENT BRANDS</span><h1 className="mt-5 max-w-3xl text-4xl font-extrabold leading-tight md:text-6xl">Remarkable goods, thoughtfully gathered.</h1><p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground">Shop considered essentials from trusted independent sellers—all in one modern marketplace.</p><div className="mt-7 flex flex-wrap gap-3"><Button asChild size="lg"><Link to="/shop">Shop now <ArrowRight /></Link></Button><Button asChild variant="outline" size="lg"><Link to="/register">Start selling</Link></Button></div><div className="mt-10 grid max-w-xl grid-cols-3 gap-4 border-t pt-6"><div><p className="font-display text-xl font-extrabold">40+</p><p className="text-xs text-muted-foreground">Independent sellers</p></div><div><p className="font-display text-xl font-extrabold">2.4k</p><p className="text-xs text-muted-foreground">Curated products</p></div><div><p className="font-display text-xl font-extrabold">4.9/5</p><p className="text-xs text-muted-foreground">Buyer satisfaction</p></div></div></div><div className="subtle-grid rounded-lg border bg-card p-5"><div className="grid grid-cols-2 gap-3">{seedProducts.slice(0, 4).map((product) => <Link key={product.id} to="/products/$id" params={{ id: product.id }} className="group relative overflow-hidden rounded-md border bg-card"><ProductImage product={product} className="aspect-square" /><span className="absolute bottom-2 left-2 right-2 rounded-md bg-card/90 px-2 py-1.5 text-xs font-bold backdrop-blur">{product.name}</span></Link>)}</div></div></div></section><section className="page-shell py-10"><div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar"><Button asChild variant="secondary"><Link to="/shop">All products</Link></Button>{categories.map((category) => <Button key={category} asChild variant="outline"><Link to="/shop">{category}</Link></Button>)}</div></section><section className="page-shell pb-16"><PageHeader eyebrow="Editor’s picks" title="Featured products" action={<Button asChild variant="ghost"><Link to="/shop">View all <ArrowRight /></Link></Button>} /><ProductGrid products={featured} /></section><section className="border-y bg-surface"><div className="page-shell py-16"><PageHeader eyebrow="Limited offers" title="Worth a closer look" description="Selected products with considered prices while stock lasts." /><ProductGrid products={discounted} /></div></section></main><Footer /></>;
+  const featured = seedProducts.slice(0, 4);
+  const discounted = seedProducts.filter((p) => p.discount > 0).slice(0, 4);
+  return (
+    <>
+      <Navbar />
+      <main>
+        <section className="border-b bg-surface">
+          <div className="page-shell grid min-h-[520px] items-center gap-10 py-14 lg:grid-cols-[1.05fr_.95fr]">
+            <div>
+              <span className="inline-flex items-center rounded-full border bg-card px-3 py-1 text-xs font-bold text-primary">
+                CURATED INDEPENDENT BRANDS
+              </span>
+              <h1 className="mt-5 max-w-3xl text-4xl font-extrabold leading-tight md:text-6xl">
+                Remarkable goods, thoughtfully gathered.
+              </h1>
+              <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground">
+                Shop considered essentials from trusted independent sellers—all in one modern
+                marketplace.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Button asChild size="lg">
+                  <Link to="/shop">
+                    Shop now <ArrowRight />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg">
+                  <Link to="/register">Start selling</Link>
+                </Button>
+              </div>
+              <div className="mt-10 grid max-w-xl grid-cols-3 gap-4 border-t pt-6">
+                <div>
+                  <p className="font-display text-xl font-extrabold">40+</p>
+                  <p className="text-xs text-muted-foreground">Independent sellers</p>
+                </div>
+                <div>
+                  <p className="font-display text-xl font-extrabold">2.4k</p>
+                  <p className="text-xs text-muted-foreground">Curated products</p>
+                </div>
+                <div>
+                  <p className="font-display text-xl font-extrabold">4.9/5</p>
+                  <p className="text-xs text-muted-foreground">Buyer satisfaction</p>
+                </div>
+              </div>
+            </div>
+            <div className="subtle-grid rounded-lg border bg-card p-5">
+              <div className="grid grid-cols-2 gap-3">
+                {seedProducts.slice(0, 4).map((product) => (
+                  <Link
+                    key={product.id}
+                    to="/products/$id"
+                    params={{ id: product.id }}
+                    className="group relative overflow-hidden rounded-md border bg-card"
+                  >
+                    <ProductImage product={product} className="aspect-square" />
+                    <span className="absolute bottom-2 left-2 right-2 rounded-md bg-card/90 px-2 py-1.5 text-xs font-bold backdrop-blur">
+                      {product.name}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+        <section className="page-shell py-10">
+          <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+            <Button asChild variant="secondary">
+              <Link to="/shop">All products</Link>
+            </Button>
+            {categories.map((category) => (
+              <Button key={category} asChild variant="outline">
+                <Link to="/shop">{category}</Link>
+              </Button>
+            ))}
+          </div>
+        </section>
+        <section className="page-shell pb-16">
+          <PageHeader
+            eyebrow="Editor’s picks"
+            title="Featured products"
+            action={
+              <Button asChild variant="ghost">
+                <Link to="/shop">
+                  View all <ArrowRight />
+                </Link>
+              </Button>
+            }
+          />
+          <ProductGrid products={featured} />
+        </section>
+        <section className="border-y bg-surface">
+          <div className="page-shell py-16">
+            <PageHeader
+              eyebrow="Limited offers"
+              title="Worth a closer look"
+              description="Selected products with considered prices while stock lasts."
+            />
+            <ProductGrid products={discounted} />
+          </div>
+        </section>
+      </main>
+      <Footer />
+    </>
+  );
 }
 
 export function ShopPage() {
-  const { products } = useAppState(); const [search, setSearch] = useState(""); const [category, setCategory] = useState("All"); const [stock, setStock] = useState("All"); const [sort, setSort] = useState("featured"); const [discounted, setDiscounted] = useState(false);
-  const filtered = useMemo(() => products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()) && (category === "All" || p.category === category) && (stock === "All" || (stock === "available" ? p.stock > 0 : p.stock === 0)) && (!discounted || p.discount > 0)).sort((a, b) => sort === "price-low" ? finalPrice(a) - finalPrice(b) : sort === "price-high" ? finalPrice(b) - finalPrice(a) : b.discount - a.discount), [products, search, category, stock, sort, discounted]);
-  return <><Navbar /><main className="page-shell py-10"><PageHeader eyebrow="Marketplace" title="Shop all products" description={`${filtered.length} curated products from independent sellers.`} /><div className="grid gap-6 lg:grid-cols-[240px_1fr]"><aside className="panel h-fit p-5"><div className="mb-5 flex items-center gap-2 font-display font-bold"><SlidersHorizontal className="size-4" /> Filters</div><div className="grid gap-5"><div><Label>Category</Label><Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="All">All categories</SelectItem>{categories.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></div><div><Label>Availability</Label><Select value={stock} onValueChange={setStock}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="All">All stock</SelectItem><SelectItem value="available">Available</SelectItem><SelectItem value="out">Out of stock</SelectItem></SelectContent></Select></div><div><Label>Maximum price</Label><Input type="number" placeholder="$250" /></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={discounted} onChange={(e) => setDiscounted(e.target.checked)} className="size-4 accent-primary" /> On sale only</label><Button variant="outline" onClick={() => { setCategory("All"); setStock("All"); setDiscounted(false); setSearch(""); }}>Clear filters</Button></div></aside><div><div className="mb-5 grid gap-3 sm:grid-cols-[1fr_190px]"><SearchInput value={search} onChange={setSearch} /><Select value={sort} onValueChange={setSort}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="featured">Featured</SelectItem><SelectItem value="price-low">Price: low to high</SelectItem><SelectItem value="price-high">Price: high to low</SelectItem></SelectContent></Select></div>{filtered.length ? <ProductGrid products={filtered} /> : <EmptyState title="No products found" description="Try adjusting your search or filters." />}<Pagination /></div></div></main><Footer /></>;
+  const { products } = useAppState();
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All");
+  const [stock, setStock] = useState("All");
+  const [sort, setSort] = useState("featured");
+  const [discounted, setDiscounted] = useState(false);
+  const filtered = useMemo(
+    () =>
+      products
+        .filter(
+          (p) =>
+            p.name.toLowerCase().includes(search.toLowerCase()) &&
+            (category === "All" || p.category === category) &&
+            (stock === "All" || (stock === "available" ? p.stock > 0 : p.stock === 0)) &&
+            (!discounted || p.discount > 0),
+        )
+        .sort((a, b) =>
+          sort === "price-low"
+            ? finalPrice(a) - finalPrice(b)
+            : sort === "price-high"
+              ? finalPrice(b) - finalPrice(a)
+              : b.discount - a.discount,
+        ),
+    [products, search, category, stock, sort, discounted],
+  );
+  return (
+    <>
+      <Navbar />
+      <main className="page-shell py-10">
+        <PageHeader
+          eyebrow="Marketplace"
+          title="Shop all products"
+          description={`${filtered.length} curated products from independent sellers.`}
+        />
+        <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
+          <aside className="panel h-fit p-5">
+            <div className="mb-5 flex items-center gap-2 font-display font-bold">
+              <SlidersHorizontal className="size-4" /> Filters
+            </div>
+            <div className="grid gap-5">
+              <div>
+                <Label>Category</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All categories</SelectItem>
+                    {categories.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Availability</Label>
+                <Select value={stock} onValueChange={setStock}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All stock</SelectItem>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="out">Out of stock</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Maximum price</Label>
+                <Input type="number" placeholder="$250" />
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={discounted}
+                  onChange={(e) => setDiscounted(e.target.checked)}
+                  className="size-4 accent-primary"
+                />{" "}
+                On sale only
+              </label>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCategory("All");
+                  setStock("All");
+                  setDiscounted(false);
+                  setSearch("");
+                }}
+              >
+                Clear filters
+              </Button>
+            </div>
+          </aside>
+          <div>
+            <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_190px]">
+              <SearchInput value={search} onChange={setSearch} />
+              <Select value={sort} onValueChange={setSort}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="featured">Featured</SelectItem>
+                  <SelectItem value="price-low">Price: low to high</SelectItem>
+                  <SelectItem value="price-high">Price: high to low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {filtered.length ? (
+              <ProductGrid products={filtered} />
+            ) : (
+              <EmptyState
+                title="No products found"
+                description="Try adjusting your search or filters."
+              />
+            )}
+            <Pagination />
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
 }
 
 export function ProductDetailsPage({ id }: { id: string }) {
-  const product = seedProducts.find((item) => item.id === id) ?? seedProducts[0]; const { addToCart } = useAppState(); const [quantity, setQuantity] = useState(1); const navigate = useNavigate();
+  const product = seedProducts.find((item) => item.id === id) ?? seedProducts[0];
+  const { addToCart } = useAppState();
+  const [quantity, setQuantity] = useState(1);
+  const navigate = useNavigate();
   if (!product) return null;
-  return <><Navbar /><main className="page-shell py-8"><BackLink to="/shop" label="Back to shop" /><div className="grid gap-9 lg:grid-cols-2"><ProductImage product={product} className="aspect-square rounded-lg border" /><div className="flex flex-col justify-center"><div className="flex gap-2"><DiscountBadge discount={product.discount} /><StockBadge stock={product.stock} /></div><p className="mt-5 text-sm font-bold text-primary">{product.category}</p><h1 className="mt-2 text-3xl font-extrabold md:text-4xl">{product.name}</h1><p className="mt-2 text-sm text-muted-foreground">Sold by <span className="font-semibold text-foreground">{product.seller}</span></p><p className="mt-6 leading-7 text-muted-foreground">{product.description}</p><div className="mt-6"><ProductPrice product={product} large /></div><Separator className="my-7" /><div><Label>Quantity</Label><div className="mt-2"><QuantityControl value={quantity} onChange={setQuantity} /></div></div><div className="mt-6 grid gap-3 sm:grid-cols-2"><Button size="lg" disabled={!product.stock} onClick={() => addToCart(product.id, quantity)}><ShoppingBag /> Add to cart</Button><Button size="lg" variant="outline" disabled={!product.stock} onClick={() => { addToCart(product.id, quantity); navigate({ to: "/checkout" }); }}>Buy now</Button></div><div className="mt-7 grid grid-cols-2 gap-3"><div className="rounded-md bg-muted p-4"><Truck className="size-5 text-primary" /><p className="mt-2 text-sm font-bold">Tracked delivery</p><p className="text-xs text-muted-foreground">Status updates at every step</p></div><div className="rounded-md bg-muted p-4"><ShieldCheck className="size-5 text-primary" /><p className="mt-2 text-sm font-bold">Secure checkout</p><p className="text-xs text-muted-foreground">Stripe-ready payment flow</p></div></div></div></div></main><Footer /></>;
+  return (
+    <>
+      <Navbar />
+      <main className="page-shell py-8">
+        <BackLink to="/shop" label="Back to shop" />
+        <div className="grid gap-9 lg:grid-cols-2">
+          <ProductImage product={product} className="aspect-square rounded-lg border" />
+          <div className="flex flex-col justify-center">
+            <div className="flex gap-2">
+              <DiscountBadge discount={product.discount} />
+              <StockBadge stock={product.stock} />
+            </div>
+            <p className="mt-5 text-sm font-bold text-primary">{product.category}</p>
+            <h1 className="mt-2 text-3xl font-extrabold md:text-4xl">{product.name}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Sold by <span className="font-semibold text-foreground">{product.seller}</span>
+            </p>
+            <p className="mt-6 leading-7 text-muted-foreground">{product.description}</p>
+            <div className="mt-6">
+              <ProductPrice product={product} large />
+            </div>
+            <Separator className="my-7" />
+            <div>
+              <Label>Quantity</Label>
+              <div className="mt-2">
+                <QuantityControl value={quantity} onChange={setQuantity} />
+              </div>
+            </div>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <Button
+                size="lg"
+                disabled={!product.stock}
+                onClick={() => addToCart(product.id, quantity)}
+              >
+                <ShoppingBag /> Add to cart
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={!product.stock}
+                onClick={() => {
+                  addToCart(product.id, quantity);
+                  navigate({ to: "/checkout" });
+                }}
+              >
+                Buy now
+              </Button>
+            </div>
+            <div className="mt-7 grid grid-cols-2 gap-3">
+              <div className="rounded-md bg-muted p-4">
+                <Truck className="size-5 text-primary" />
+                <p className="mt-2 text-sm font-bold">Tracked delivery</p>
+                <p className="text-xs text-muted-foreground">Status updates at every step</p>
+              </div>
+              <div className="rounded-md bg-muted p-4">
+                <ShieldCheck className="size-5 text-primary" />
+                <p className="mt-2 text-sm font-bold">Secure checkout</p>
+                <p className="text-xs text-muted-foreground">Stripe-ready payment flow</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
 }
 
-export function CartPage() { const { cart, products, updateQuantity, removeFromCart } = useAppState(); const lines = cart.flatMap((line) => { const product = products.find((p) => p.id === line.productId); return product ? [{ ...line, product }] : []; }); const subtotal = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0); const total = lines.reduce((sum, line) => sum + finalPrice(line.product) * line.quantity, 0); if (!lines.length) return <><Navbar /><main className="page-shell py-12"><EmptyState title="Your cart is empty" description="Explore the marketplace and add something you love." action={<Button asChild><Link to="/shop">Browse products</Link></Button>} /></main></>; return <><Navbar /><main className="page-shell py-10"><PageHeader title="Shopping cart" description={`${lines.length} products ready for checkout.`} /><div className="grid gap-6 lg:grid-cols-[1fr_360px]"><div className="panel divide-y">{lines.map((line) => <div key={line.productId} className="grid grid-cols-[88px_1fr] gap-4 p-4 sm:grid-cols-[104px_1fr_auto]"><ProductImage product={line.product} className="aspect-square rounded-md" /><div><h2 className="font-display font-bold">{line.product.name}</h2><p className="text-xs text-muted-foreground">{line.product.seller}</p><div className="mt-2"><ProductPrice product={line.product} /></div><div className="mt-3 sm:hidden"><QuantityControl value={line.quantity} onChange={(value) => updateQuantity(line.productId, value)} /></div></div><div className="col-span-2 flex items-center justify-between sm:col-span-1 sm:flex-col sm:items-end"><div className="hidden sm:block"><QuantityControl value={line.quantity} onChange={(value) => updateQuantity(line.productId, value)} /></div><p className="font-bold">{money(finalPrice(line.product) * line.quantity)}</p><Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeFromCart(line.productId)}><Trash2 /> Remove</Button></div></div>)}</div><Summary subtotal={subtotal} total={total} action={<Button asChild size="lg" className="w-full"><Link to="/checkout">Proceed to checkout <ArrowRight /></Link></Button>} /></div></main></>;
+export function CartPage() {
+  const { cart, products, updateQuantity, removeFromCart } = useAppState();
+  const lines = cart.flatMap((line) => {
+    const product = products.find((p) => p.id === line.productId);
+    return product ? [{ ...line, product }] : [];
+  });
+  const subtotal = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
+  const total = lines.reduce((sum, line) => sum + finalPrice(line.product) * line.quantity, 0);
+  if (!lines.length)
+    return (
+      <>
+        <Navbar />
+        <main className="page-shell py-12">
+          <EmptyState
+            title="Your cart is empty"
+            description="Explore the marketplace and add something you love."
+            action={
+              <Button asChild>
+                <Link to="/shop">Browse products</Link>
+              </Button>
+            }
+          />
+        </main>
+      </>
+    );
+  return (
+    <>
+      <Navbar />
+      <main className="page-shell py-10">
+        <PageHeader
+          title="Shopping cart"
+          description={`${lines.length} products ready for checkout.`}
+        />
+        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+          <div className="panel divide-y">
+            {lines.map((line) => (
+              <div
+                key={line.productId}
+                className="grid grid-cols-[88px_1fr] gap-4 p-4 sm:grid-cols-[104px_1fr_auto]"
+              >
+                <ProductImage product={line.product} className="aspect-square rounded-md" />
+                <div>
+                  <h2 className="font-display font-bold">{line.product.name}</h2>
+                  <p className="text-xs text-muted-foreground">{line.product.seller}</p>
+                  <div className="mt-2">
+                    <ProductPrice product={line.product} />
+                  </div>
+                  <div className="mt-3 sm:hidden">
+                    <QuantityControl
+                      value={line.quantity}
+                      onChange={(value) => updateQuantity(line.productId, value)}
+                    />
+                  </div>
+                </div>
+                <div className="col-span-2 flex items-center justify-between sm:col-span-1 sm:flex-col sm:items-end">
+                  <div className="hidden sm:block">
+                    <QuantityControl
+                      value={line.quantity}
+                      onChange={(value) => updateQuantity(line.productId, value)}
+                    />
+                  </div>
+                  <p className="font-bold">{money(finalPrice(line.product) * line.quantity)}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive"
+                    onClick={() => removeFromCart(line.productId)}
+                  >
+                    <Trash2 /> Remove
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Summary
+            subtotal={subtotal}
+            total={total}
+            action={
+              <Button asChild size="lg" className="w-full">
+                <Link to="/checkout">
+                  Proceed to checkout <ArrowRight />
+                </Link>
+              </Button>
+            }
+          />
+        </div>
+      </main>
+    </>
+  );
 }
 
-export function CheckoutPage() { const { cart, products } = useAppState(); const total = cart.reduce((sum, line) => { const p = products.find((item) => item.id === line.productId); return sum + (p ? finalPrice(p) * line.quantity : 0); }, 0); const navigate = useNavigate(); return <><Navbar /><main className="page-shell py-10"><PageHeader title="Checkout" description="Complete your shipping details and continue to secure payment." /><div className="grid gap-6 lg:grid-cols-[1fr_400px]"><form className="panel grid gap-5 p-6" onSubmit={(event) => { event.preventDefault(); navigate({ to: "/orders" }); }}><h2 className="font-display text-lg font-bold">Customer information</h2><div className="grid gap-4 sm:grid-cols-2"><Field label="Full name" placeholder="Ariana Wells" /><Field label="Email" type="email" placeholder="ariana@example.com" /><Field label="Phone" placeholder="+1 555 012 3489" /><div className="sm:col-span-2"><Field label="Shipping address" placeholder="128 Market Street, San Francisco, CA 94105" /></div></div><Button type="submit" size="lg"><CreditCard /> Pay with Stripe</Button><p className="text-center text-xs text-muted-foreground">This frontend will call your backend payment endpoint and follow its Stripe redirect URL.</p></form><div className="panel h-fit p-6"><h2 className="font-display text-lg font-bold">Order summary</h2><div className="mt-5 grid gap-4">{cart.map((line) => { const p = products.find((item) => item.id === line.productId); return p ? <div key={line.productId} className="flex gap-3"><ProductImage product={p} className="size-16 shrink-0 rounded-md" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{p.name}</p><p className="text-xs text-muted-foreground">{p.seller} · Qty {line.quantity}</p><p className="mt-1 text-sm">{money(finalPrice(p) * line.quantity)}</p></div></div> : null; })}</div><Separator className="my-5" /><div className="flex justify-between font-display text-lg font-extrabold"><span>Total</span><span>{money(total)}</span></div></div></div></main></>;
+export function CheckoutPage() {
+  const { cart, products } = useAppState();
+  const total = cart.reduce((sum, line) => {
+    const p = products.find((item) => item.id === line.productId);
+    return sum + (p ? finalPrice(p) * line.quantity : 0);
+  }, 0);
+  const navigate = useNavigate();
+  return (
+    <>
+      <Navbar />
+      <main className="page-shell py-10">
+        <PageHeader
+          title="Checkout"
+          description="Complete your shipping details and continue to secure payment."
+        />
+        <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+          <form
+            className="panel grid gap-5 p-6"
+            onSubmit={(event) => {
+              event.preventDefault();
+              navigate({ to: "/orders" });
+            }}
+          >
+            <h2 className="font-display text-lg font-bold">Customer information</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Full name" placeholder="Ariana Wells" />
+              <Field label="Email" type="email" placeholder="ariana@example.com" />
+              <Field label="Phone" placeholder="+1 555 012 3489" />
+              <div className="sm:col-span-2">
+                <Field
+                  label="Shipping address"
+                  placeholder="128 Market Street, San Francisco, CA 94105"
+                />
+              </div>
+            </div>
+            <Button type="submit" size="lg">
+              <CreditCard /> Pay with Stripe
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              This frontend will call your backend payment endpoint and follow its Stripe redirect
+              URL.
+            </p>
+          </form>
+          <div className="panel h-fit p-6">
+            <h2 className="font-display text-lg font-bold">Order summary</h2>
+            <div className="mt-5 grid gap-4">
+              {cart.map((line) => {
+                const p = products.find((item) => item.id === line.productId);
+                return p ? (
+                  <div key={line.productId} className="flex gap-3">
+                    <ProductImage product={p} className="size-16 shrink-0 rounded-md" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold">{p.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {p.seller} · Qty {line.quantity}
+                      </p>
+                      <p className="mt-1 text-sm">{money(finalPrice(p) * line.quantity)}</p>
+                    </div>
+                  </div>
+                ) : null;
+              })}
+            </div>
+            <Separator className="my-5" />
+            <div className="flex justify-between font-display text-lg font-extrabold">
+              <span>Total</span>
+              <span>{money(total)}</span>
+            </div>
+          </div>
+        </div>
+      </main>
+    </>
+  );
 }
 
-export function OrdersPage() { return <><Navbar /><main className="page-shell py-10"><PageHeader title="My orders" description="Track every purchase and view current delivery status." /><div className="panel overflow-hidden"><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead className="border-b bg-muted"><tr>{["Order", "Date", "Products", "Total", "Payment", "Status", ""].map((h) => <th key={h} className="px-4 py-3 text-left font-medium text-muted-foreground">{h}</th>)}</tr></thead><tbody>{orders.map((order) => <tr key={order.id} className="border-b last:border-0"><td className="px-4 py-4 font-bold">{order.id}</td><td className="px-4 py-4 text-muted-foreground">{order.date}</td><td className="px-4 py-4">{order.product}</td><td className="px-4 py-4 font-semibold">{money(order.amount)}</td><td className="px-4 py-4">{order.payment}</td><td className="px-4 py-4"><OrderStatusBadge status={order.status} /></td><td className="px-4 py-4"><Button asChild variant="ghost" size="sm"><Link to="/orders/$id" params={{ id: order.id }}>View details</Link></Button></td></tr>)}</tbody></table></div></div></main></>;
+export function OrdersPage() {
+  return (
+    <>
+      <Navbar />
+      <main className="page-shell py-10">
+        <PageHeader
+          title="My orders"
+          description="Track every purchase and view current delivery status."
+        />
+        <div className="panel overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead className="border-b bg-muted">
+                <tr>
+                  {["Order", "Date", "Products", "Total", "Payment", "Status", ""].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left font-medium text-muted-foreground">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((order) => (
+                  <tr key={order.id} className="border-b last:border-0">
+                    <td className="px-4 py-4 font-bold">{order.id}</td>
+                    <td className="px-4 py-4 text-muted-foreground">{order.date}</td>
+                    <td className="px-4 py-4">{order.product}</td>
+                    <td className="px-4 py-4 font-semibold">{money(order.amount)}</td>
+                    <td className="px-4 py-4">{order.payment}</td>
+                    <td className="px-4 py-4">
+                      <OrderStatusBadge status={order.status} />
+                    </td>
+                    <td className="px-4 py-4">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link to="/orders/$id" params={{ id: order.id }}>
+                          View details
+                        </Link>
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </>
+  );
 }
-export function OrderPage({ id }: { id: string }) { const order = orders.find((item) => item.id === id) ?? orders[0]; const product = seedProducts[0]; if (!order || !product) return null; return <><Navbar /><main className="page-shell py-10"><BackLink to="/orders" label="Back to orders" /><PageHeader title={`Order ${order.id}`} description={`Placed on ${order.date}`} action={<OrderStatusBadge status={order.status} />} /><div className="grid gap-6 lg:grid-cols-[1fr_360px]"><div className="panel p-6"><h2 className="font-display text-lg font-bold">Order progress</h2><div className="mt-8"><OrderStatusTimeline status={order.status} /></div><Separator className="my-7" /><h2 className="font-display text-lg font-bold">Products</h2><div className="mt-4 flex gap-4"><ProductImage product={product} className="size-20 rounded-md" /><div><p className="font-bold">{order.product}</p><p className="text-sm text-muted-foreground">{order.seller} · Quantity {order.quantity}</p><p className="mt-2 font-bold">{money(order.amount)}</p></div></div></div><div className="panel h-fit p-6"><h2 className="font-display text-lg font-bold">Shipping information</h2><p className="mt-4 text-sm leading-6 text-muted-foreground">{order.customer}<br />128 Market Street<br />San Francisco, CA 94105</p><Separator className="my-5" /><div className="flex justify-between text-sm"><span>Payment status</span><strong>{order.payment}</strong></div><div className="mt-3 flex justify-between"><span className="text-sm">Total</span><strong>{money(order.amount)}</strong></div></div></div></main></>;
+export function OrderPage({ id }: { id: string }) {
+  const order = orders.find((item) => item.id === id) ?? orders[0];
+  const product = seedProducts[0];
+  if (!order || !product) return null;
+  return (
+    <>
+      <Navbar />
+      <main className="page-shell py-10">
+        <BackLink to="/orders" label="Back to orders" />
+        <PageHeader
+          title={`Order ${order.id}`}
+          description={`Placed on ${order.date}`}
+          action={<OrderStatusBadge status={order.status} />}
+        />
+        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+          <div className="panel p-6">
+            <h2 className="font-display text-lg font-bold">Order progress</h2>
+            <div className="mt-8">
+              <OrderStatusTimeline status={order.status} />
+            </div>
+            <Separator className="my-7" />
+            <h2 className="font-display text-lg font-bold">Products</h2>
+            <div className="mt-4 flex gap-4">
+              <ProductImage product={product} className="size-20 rounded-md" />
+              <div>
+                <p className="font-bold">{order.product}</p>
+                <p className="text-sm text-muted-foreground">
+                  {order.seller} · Quantity {order.quantity}
+                </p>
+                <p className="mt-2 font-bold">{money(order.amount)}</p>
+              </div>
+            </div>
+          </div>
+          <div className="panel h-fit p-6">
+            <h2 className="font-display text-lg font-bold">Shipping information</h2>
+            <p className="mt-4 text-sm leading-6 text-muted-foreground">
+              {order.customer}
+              <br />
+              128 Market Street
+              <br />
+              San Francisco, CA 94105
+            </p>
+            <Separator className="my-5" />
+            <div className="flex justify-between text-sm">
+              <span>Payment status</span>
+              <strong>{order.payment}</strong>
+            </div>
+            <div className="mt-3 flex justify-between">
+              <span className="text-sm">Total</span>
+              <strong>{money(order.amount)}</strong>
+            </div>
+          </div>
+        </div>
+      </main>
+    </>
+  );
 }
-export function ProfilePage() { return <><Navbar /><main className="page-shell max-w-3xl py-10"><PageHeader title="Profile" description="Manage your account and shipping information." /><form className="panel grid gap-5 p-6"><div className="grid gap-4 sm:grid-cols-2"><Field label="Full name" placeholder="Ariana Wells" /><Field label="Email" type="email" placeholder="ariana@example.com" /><Field label="Phone" placeholder="+1 555 012 3489" /><Field label="Shipping address" placeholder="128 Market Street" /></div><Button className="w-fit">Save changes</Button></form></main></>;
+export function ProfilePage() {
+  const { user } = useAppState();
+  const fullName = `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim();
+  return (
+    <>
+      <Navbar />
+      <main className="page-shell max-w-3xl py-10">
+        <PageHeader title="Profile" description="Manage your account and shipping information." />
+        <form className="panel grid gap-5 p-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Full name" placeholder="Ariana Wells" defaultValue={fullName} />
+            <Field
+              label="Email"
+              type="email"
+              placeholder="ariana@example.com"
+              defaultValue={user?.email ?? ""}
+            />
+            <Field label="Phone" placeholder="+1 555 012 3489" />
+            <Field label="Shipping address" placeholder="128 Market Street" />
+          </div>
+          <Button className="w-fit">Save changes</Button>
+        </form>
+      </main>
+    </>
+  );
 }
-function Field({ label, ...props }: React.ComponentProps<typeof Input> & { label: string }) { return <label className="grid gap-1.5 text-sm font-medium">{label}<Input required {...props} /></label>; }
-function Summary({ subtotal, total, action }: { subtotal: number; total: number; action: React.ReactNode }) { return <aside className="panel h-fit p-6"><h2 className="font-display text-lg font-bold">Order summary</h2><div className="mt-5 grid gap-3 text-sm"><div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{money(subtotal)}</span></div><div className="flex justify-between"><span className="text-muted-foreground">Total discount</span><span className="text-success-foreground">−{money(subtotal - total)}</span></div><Separator /><div className="flex justify-between font-display text-lg font-extrabold"><span>Total</span><span>{money(total)}</span></div></div><div className="mt-6">{action}</div></aside>; }
-function Footer() { return <footer className="border-t"><div className="page-shell flex flex-col gap-2 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between"><p className="font-display font-bold text-foreground">Marketly</p><p>Curated goods from independent sellers.</p></div></footer>; }
+function Field({ label, ...props }: React.ComponentProps<typeof Input> & { label: string }) {
+  return (
+    <label className="grid gap-1.5 text-sm font-medium">
+      {label}
+      <Input required {...props} />
+    </label>
+  );
+}
+function Summary({
+  subtotal,
+  total,
+  action,
+}: {
+  subtotal: number;
+  total: number;
+  action: React.ReactNode;
+}) {
+  return (
+    <aside className="panel h-fit p-6">
+      <h2 className="font-display text-lg font-bold">Order summary</h2>
+      <div className="mt-5 grid gap-3 text-sm">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Subtotal</span>
+          <span>{money(subtotal)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Total discount</span>
+          <span className="text-success-foreground">−{money(subtotal - total)}</span>
+        </div>
+        <Separator />
+        <div className="flex justify-between font-display text-lg font-extrabold">
+          <span>Total</span>
+          <span>{money(total)}</span>
+        </div>
+      </div>
+      <div className="mt-6">{action}</div>
+    </aside>
+  );
+}
+function Footer() {
+  return (
+    <footer className="border-t">
+      <div className="page-shell flex flex-col gap-2 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <p className="font-display font-bold text-foreground">Marketly</p>
+        <p>Curated goods from independent sellers.</p>
+      </div>
+    </footer>
+  );
+}
