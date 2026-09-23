@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Box,
   DollarSign,
   Eye,
+  Loader2,
   Package,
   Pencil,
   Plus,
@@ -50,6 +52,8 @@ import {
 } from "./Dialogs";
 import { OrderStatusBadge, PageHeader, ProductImage, StatsCard, StockBadge } from "./Common";
 import { useAppState } from "./AppState";
+import { authApi } from "@/api/auth.api";
+import { ApiError } from "@/api/client";
 
 const statSets = {
   seller: [
@@ -521,7 +525,28 @@ export function CategoriesPage() {
 }
 
 export function DashboardProfile({ seller = false }: { seller?: boolean }) {
-  const { user, accessToken } = useAppState();
+  const { user, accessToken, updateUser } = useAppState();
+  const [firstName, setFirstName] = useState(user?.firstName ?? "");
+  const [lastName, setLastName] = useState(user?.lastName ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const saveChanges = async () => {
+    if (!accessToken) {
+      toast.error("You need to be signed in to update your profile.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data } = await authApi.updateProfile({ firstName, lastName }, accessToken);
+      updateUser(data);
+      toast.success("Profile updated.");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not update profile.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="max-w-3xl">
       <PageHeader
@@ -533,21 +558,39 @@ export function DashboardProfile({ seller = false }: { seller?: boolean }) {
       <div className="panel grid gap-4 p-6 sm:grid-cols-2" key={user?._id ?? "loading"}>
         <label className="text-sm font-medium">
           First name
-          <Input className="mt-1.5" defaultValue={user?.firstName ?? ""} />
+          <Input
+            className="mt-1.5"
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+          />
         </label>
         <label className="text-sm font-medium">
           Last name
-          <Input className="mt-1.5" defaultValue={user?.lastName ?? ""} />
+          <Input
+            className="mt-1.5"
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
+          />
         </label>
         {seller && (
           <label className="text-sm font-medium">
             Store name
-            <Input className="mt-1.5" defaultValue={user?.storeName ?? ""} />
+            <Input
+              className="mt-1.5 cursor-not-allowed opacity-70"
+              defaultValue={user?.storeName ?? ""}
+              disabled
+              title="Store name can't be changed here."
+            />
           </label>
         )}
         <label className="text-sm font-medium">
           Email
-          <Input className="mt-1.5" defaultValue={user?.email ?? ""} />
+          <Input
+            className="mt-1.5 cursor-not-allowed opacity-70"
+            defaultValue={user?.email ?? ""}
+            disabled
+            title="Email can't be changed here."
+          />
         </label>
         <div className="text-sm font-medium">
           Verified
@@ -560,7 +603,10 @@ export function DashboardProfile({ seller = false }: { seller?: boolean }) {
           </div>
         </div>
         <div className="flex gap-3 sm:col-span-2">
-          <Button>Save changes</Button>
+          <Button disabled={saving} onClick={saveChanges}>
+            {saving ? <Loader2 className="animate-spin" /> : null}
+            Save changes
+          </Button>
           <ChangePasswordDialog
             accessToken={accessToken}
             trigger={<Button variant="outline">Change password</Button>}

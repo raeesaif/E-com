@@ -49,6 +49,11 @@ export interface ChangePasswordPayload {
   newPassword: string;
 }
 
+export interface UpdateProfilePayload {
+  firstName: string;
+  lastName: string;
+}
+
 export const authApi = {
   register: (payload: RegisterPayload) =>
     apiRequest<ApiEnvelope<AuthUser>>("/auth/register", {
@@ -81,8 +86,14 @@ export const authApi = {
       body: JSON.stringify(payload),
     }),
   changePassword: (payload: ChangePasswordPayload, accessToken: string) =>
-    apiRequest<ApiEnvelope<null>>("/auth/change-password", {
-      method: "POST",
+    apiRequest<ApiEnvelope<null>>("/auth/update-password", {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify(payload),
+    }),
+  updateProfile: (payload: UpdateProfilePayload, accessToken: string) =>
+    apiRequest<ApiEnvelope<AuthUser>>("/auth/update-profile", {
+      method: "PATCH",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify(payload),
     }),

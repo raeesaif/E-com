@@ -11,6 +11,7 @@ interface AppStateValue {
   accessToken: string | null;
   hydrated: boolean;
   signIn: (user: AuthUser, tokens: { accessToken: string; refreshToken: string }) => void;
+  updateUser: (user: AuthUser) => void;
   signOut: () => void;
   cart: CartLine[];
   addToCart: (id: string, quantity?: number) => void;
@@ -82,6 +83,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem("market-refresh-token", tokens.refreshToken);
     setRole(nextUser.role);
   };
+  const updateUser = (nextUser: AuthUser) => {
+    setUser(nextUser);
+    window.localStorage.setItem("market-user", JSON.stringify(nextUser));
+  };
   const signOut = () => {
     if (accessToken) authApi.logout(accessToken).catch(() => undefined);
     setUser(null);
@@ -99,6 +104,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       user,
       accessToken,
       signIn,
+      updateUser,
       signOut,
       cart,
       products,
