@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Brand, ThemeToggle } from "./Common";
-import { useAppState } from "./AppState";
+import { useAppState } from "./useAppState";
 import { TextField } from "./AuthField";
 import { authApi } from "@/api/auth.api";
 import { ApiError } from "@/api/client";

@@ -39,8 +39,10 @@ import {
   SearchInput,
   StockBadge,
 } from "./Common";
-import { useAppState } from "./AppState";
+import { useAppState } from "./useAppState";
 import { Navbar } from "./Shells";
+import { Footer } from "./Footer";
+import { motion } from "motion/react";
 
 export function HomePage() {
   const featured = seedProducts.slice(0, 4);
@@ -51,11 +53,15 @@ export function HomePage() {
       <main>
         <section className="border-b bg-surface">
           <div className="page-shell grid min-h-[520px] items-center gap-10 py-14 lg:grid-cols-[1.05fr_.95fr]">
-            <div>
-              <span className="inline-flex items-center rounded-full border bg-card px-3 py-1 text-xs font-bold text-primary">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <span className="inline-flex items-center rounded-full border bg-card px-3 py-1 text-xs font-bold text-primary shadow-xs">
                 CURATED INDEPENDENT BRANDS
               </span>
-              <h1 className="mt-5 max-w-3xl text-4xl font-extrabold leading-tight md:text-6xl">
+              <h1 className="mt-5 max-w-3xl text-4xl font-extrabold leading-tight md:text-6xl tracking-tight">
                 Remarkable goods, thoughtfully gathered.
               </h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground">
@@ -63,9 +69,9 @@ export function HomePage() {
                 marketplace.
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Button asChild size="lg">
+                <Button asChild size="lg" className="font-semibold shadow-sm">
                   <Link to="/shop">
-                    Shop now <ArrowRight />
+                    Shop now <ArrowRight className="size-4" />
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
@@ -86,24 +92,32 @@ export function HomePage() {
                   <p className="text-xs text-muted-foreground">Buyer satisfaction</p>
                 </div>
               </div>
-            </div>
-            <div className="subtle-grid rounded-lg border bg-card p-5">
-              <div className="grid grid-cols-2 gap-3">
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.55, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              className="subtle-grid rounded-xl border bg-card p-5 shadow-sm"
+            >
+              <div className="grid grid-cols-2 gap-3.5">
                 {seedProducts.slice(0, 4).map((product) => (
                   <Link
                     key={product.id}
                     to="/products/$id"
                     params={{ id: product.id }}
-                    className="group relative overflow-hidden rounded-md border bg-card"
+                    className="group relative overflow-hidden rounded-lg border bg-card transition-all duration-300 hover:shadow-md hover:border-primary/40"
                   >
-                    <ProductImage product={product} className="aspect-square" />
-                    <span className="absolute bottom-2 left-2 right-2 rounded-md bg-card/90 px-2 py-1.5 text-xs font-bold backdrop-blur">
+                    <ProductImage
+                      product={product}
+                      className="aspect-square transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <span className="absolute bottom-2 left-2 right-2 rounded-md bg-card/90 px-2.5 py-1.5 text-xs font-bold backdrop-blur-md shadow-xs">
                       {product.name}
                     </span>
                   </Link>
                 ))}
               </div>
-            </div>
+            </motion.div>
           </div>
         </section>
         <section className="page-shell py-10">
@@ -436,6 +450,7 @@ export function CartPage() {
           />
         </div>
       </main>
+      <Footer />
     </>
   );
 }
@@ -510,6 +525,7 @@ export function CheckoutPage() {
           </div>
         </div>
       </main>
+      <Footer />
     </>
   );
 }
@@ -560,6 +576,7 @@ export function OrdersPage() {
           </div>
         </div>
       </main>
+      <Footer />
     </>
   );
 }
@@ -617,6 +634,7 @@ export function OrderPage({ id }: { id: string }) {
           </div>
         </div>
       </main>
+      <Footer />
     </>
   );
 }
@@ -643,6 +661,7 @@ export function ProfilePage() {
           <Button className="w-fit">Save changes</Button>
         </form>
       </main>
+      <Footer />
     </>
   );
 }
@@ -683,15 +702,5 @@ function Summary({
       </div>
       <div className="mt-6">{action}</div>
     </aside>
-  );
-}
-function Footer() {
-  return (
-    <footer className="border-t">
-      <div className="page-shell flex flex-col gap-2 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <p className="font-display font-bold text-foreground">Marketly</p>
-        <p>Curated goods from independent sellers.</p>
-      </div>
-    </footer>
   );
 }

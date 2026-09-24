@@ -1,27 +1,9 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { CartLine, Product, Role } from "@/lib/marketplace";
 import { products as seedProducts } from "@/lib/marketplace";
 import { authApi, type AuthUser } from "@/api/auth.api";
 import { ApiError } from "@/api/client";
-
-interface AppStateValue {
-  role: Role | null;
-  setRole: (role: Role | null) => void;
-  user: AuthUser | null;
-  accessToken: string | null;
-  hydrated: boolean;
-  signIn: (user: AuthUser, tokens: { accessToken: string; refreshToken: string }) => void;
-  updateUser: (user: AuthUser) => void;
-  signOut: () => void;
-  cart: CartLine[];
-  addToCart: (id: string, quantity?: number) => void;
-  updateQuantity: (id: string, quantity: number) => void;
-  removeFromCart: (id: string) => void;
-  products: Product[];
-  saveProduct: (product: Product) => void;
-  deleteProduct: (id: string) => void;
-}
-const AppState = createContext<AppStateValue | null>(null);
+import { AppState, type AppStateValue } from "./useAppState";
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<Role | null>(null);
@@ -33,6 +15,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   ]);
   const [products, setProducts] = useState(seedProducts);
   const [hydrated, setHydrated] = useState(false);
+
   useEffect(() => {
     const stored = window.localStorage.getItem("market-role") as Role | null;
     if (stored === "admin" || stored === "seller" || stored === "customer") setRoleState(stored);
@@ -70,24 +53,31 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
       });
   }, []);
-  const setRole = (next: Role | null) => {
+
+  const setRole = useCallback((next: Role | null) => {
     setRoleState(next);
     if (next) window.localStorage.setItem("market-role", next);
     else window.localStorage.removeItem("market-role");
-  };
-  const signIn = (nextUser: AuthUser, tokens: { accessToken: string; refreshToken: string }) => {
+  }, []);
+
+  const signIn = useCallback(
+    (nextUser: AuthUser, tokens: { accessToken: string; refreshToken: string }) => {
+      setUser(nextUser);
+      setAccessToken(tokens.accessToken);
+      window.localStorage.setItem("market-user", JSON.stringify(nextUser));
+      window.localStorage.setItem("market-access-token", tokens.accessToken);
+      window.localStorage.setItem("market-refresh-token", tokens.refreshToken);
+      setRole(nextUser.role);
+    },
+    [setRole],
+  );
+
+  const updateUser = useCallback((nextUser: AuthUser) => {
     setUser(nextUser);
-    setAccessToken(tokens.accessToken);
     window.localStorage.setItem("market-user", JSON.stringify(nextUser));
-    window.localStorage.setItem("market-access-token", tokens.accessToken);
-    window.localStorage.setItem("market-refresh-token", tokens.refreshToken);
-    setRole(nextUser.role);
-  };
-  const updateUser = (nextUser: AuthUser) => {
-    setUser(nextUser);
-    window.localStorage.setItem("market-user", JSON.stringify(nextUser));
-  };
-  const signOut = () => {
+  }, []);
+
+  const signOut = useCallback(() => {
     if (accessToken) authApi.logout(accessToken).catch(() => undefined);
     setUser(null);
     setAccessToken(null);
@@ -95,7 +85,42 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     window.localStorage.removeItem("market-access-token");
     window.localStorage.removeItem("market-refresh-token");
     setRole(null);
-  };
+  }, [accessToken, setRole]);
+
+  const addToCart = useCallback((id: string, quantity = 1) => {
+    setCart((lines) =>
+      lines.some((line) => line.productId === id)
+        ? lines.map((line) =>
+            line.productId === id ? { ...line, quantity: line.quantity + quantity } : line,
+          )
+        : [...lines, { productId: id, quantity }],
+    );
+  }, []);
+
+  const updateQuantity = useCallback((id: string, quantity: number) => {
+    setCart((lines) =>
+      lines.map((line) =>
+        line.productId === id ? { ...line, quantity: Math.max(1, quantity) } : line,
+      ),
+    );
+  }, []);
+
+  const removeFromCart = useCallback((id: string) => {
+    setCart((lines) => lines.filter((line) => line.productId !== id));
+  }, []);
+
+  const saveProduct = useCallback((product: Product) => {
+    setProducts((items) =>
+      items.some((item) => item.id === product.id)
+        ? items.map((item) => (item.id === product.id ? product : item))
+        : [product, ...items],
+    );
+  }, []);
+
+  const deleteProduct = useCallback((id: string) => {
+    setProducts((items) => items.filter((item) => item.id !== id));
+  }, []);
+
   const value = useMemo<AppStateValue>(
     () => ({
       role,
@@ -108,36 +133,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       signOut,
       cart,
       products,
-      addToCart: (id, quantity = 1) =>
-        setCart((lines) =>
-          lines.some((line) => line.productId === id)
-            ? lines.map((line) =>
-                line.productId === id ? { ...line, quantity: line.quantity + quantity } : line,
-              )
-            : [...lines, { productId: id, quantity }],
-        ),
-      updateQuantity: (id, quantity) =>
-        setCart((lines) =>
-          lines.map((line) =>
-            line.productId === id ? { ...line, quantity: Math.max(1, quantity) } : line,
-          ),
-        ),
-      removeFromCart: (id) => setCart((lines) => lines.filter((line) => line.productId !== id)),
-      saveProduct: (product) =>
-        setProducts((items) =>
-          items.some((item) => item.id === product.id)
-            ? items.map((item) => (item.id === product.id ? product : item))
-            : [product, ...items],
-        ),
-      deleteProduct: (id) => setProducts((items) => items.filter((item) => item.id !== id)),
+      addToCart,
+      updateQuantity,
+      removeFromCart,
+      saveProduct,
+      deleteProduct,
     }),
-    [role, user, accessToken, hydrated, cart, products],
+    [
+      role,
+      setRole,
+      hydrated,
+      user,
+      accessToken,
+      signIn,
+      updateUser,
+      signOut,
+      cart,
+      products,
+      addToCart,
+      updateQuantity,
+      removeFromCart,
+      saveProduct,
+      deleteProduct,
+    ],
   );
-  return <AppState.Provider value={value}>{children}</AppState.Provider>;
-}
 
-export function useAppState() {
-  const value = useContext(AppState);
-  if (!value) throw new Error("useAppState must be used within AppStateProvider");
-  return value;
+  return <AppState.Provider value={value}>{children}</AppState.Provider>;
 }

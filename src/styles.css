@@ -99,14 +99,188 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html { scroll-behavior: smooth; }
-  body { background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
-  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: 0; }
-  button, a, input, select, textarea { letter-spacing: 0; }
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: 0;
+  }
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    letter-spacing: 0;
+  }
 }
 
-@utility page-shell { margin-inline: auto; width: 100%; max-width: 1440px; padding-inline: 1rem; }
-@utility panel { border: 1px solid var(--border); background: var(--card); border-radius: var(--radius); box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 5%, transparent); }
-@utility subtle-grid { background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 36px 36px; }
-@utility hide-scrollbar { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
+@utility page-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1440px;
+  padding-inline: 1rem;
+}
+@utility panel {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+@utility subtle-grid {
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+@utility hide-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ========================================================
+   Dialog & Modal Fluid Spring Animations
+   ======================================================== */
+.dialog-overlay-animation {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.dialog-overlay-animation[data-state="open"] {
+  animation: dialogOverlayFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.dialog-overlay-animation[data-state="closed"] {
+  animation: dialogOverlayFadeOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes dialogOverlayFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+@keyframes dialogOverlayFadeOut {
+  from {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  to {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+}
+
+.dialog-content-animation {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 50;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+
+.dialog-content-animation[data-state="open"] {
+  animation: dialogContentSpringIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.dialog-content-animation[data-state="closed"] {
+  animation: dialogContentSpringOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes dialogContentSpringIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.92);
+  }
+  65% {
+    transform: translate(-50%, -50.5%) scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes dialogContentSpringOut {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.95);
+  }
+}
+
+/* ========================================================
+   Interactive Button Micro-Animations & Tactile States
+   ======================================================== */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+.btn-interactive {
+  transition:
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+button:not(:disabled):hover,
+[role="button"]:not([aria-disabled="true"]):hover,
+.btn-interactive:hover {
+  transform: translateY(-2px);
+}
+
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active,
+.btn-interactive:active {
+  transform: translateY(1px) scale(0.96);
+  transition-duration: 0.08s;
+}
+
+/* Specific button variant glow blooms */
+button.bg-primary:not(:disabled):hover {
+  box-shadow: 0 8px 24px -4px color-mix(in oklab, var(--color-primary) 35%, transparent);
+}
+
+button.bg-destructive:not(:disabled):hover {
+  box-shadow: 0 8px 24px -4px color-mix(in oklab, var(--color-destructive) 35%, transparent);
+}
+
+button.bg-secondary:not(:disabled):hover {
+  box-shadow: 0 6px 16px -4px
+    color-mix(in oklab, var(--color-secondary-foreground) 15%, transparent);
+}
+
+button.border:not(:disabled):hover {
+  box-shadow: 0 4px 14px -3px color-mix(in oklab, var(--color-foreground) 10%, transparent);
+}

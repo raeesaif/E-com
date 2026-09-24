@@ -1,2 +1,32 @@
-import { createFileRoute } from "@tanstack/react-router"; import { OrderPage } from "@/components/marketplace/StorePages"; import { ProtectedRoute } from "@/components/marketplace/Shells";
-export const Route = createFileRoute("/orders/$id")({ head: () => ({ meta: [{ title: "Order details — Marketly" }, { name: "description", content: "View order products, shipping, payment, and delivery progress." }, { property: "og:title", content: "Order details — Marketly" }, { property: "og:description", content: "View order products, shipping, payment, and delivery progress." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: () => <ProtectedRoute allowed={["customer"]}><OrderPage id={Route.useParams().id} /></ProtectedRoute> });
+import { createFileRoute } from "@tanstack/react-router";
+import { OrderPage } from "@/components/marketplace/StorePages";
+import { ProtectedRoute } from "@/components/marketplace/Shells";
+
+function OrderDetailsRouteComponent() {
+  const { id } = Route.useParams();
+  return (
+    <ProtectedRoute allowed={["customer"]}>
+      <OrderPage id={id} />
+    </ProtectedRoute>
+  );
+}
+
+export const Route = createFileRoute("/orders/$id")({
+  head: () => ({
+    meta: [
+      { title: "Order details — Marketly" },
+      {
+        name: "description",
+        content: "View order products, shipping, payment, and delivery progress.",
+      },
+      { property: "og:title", content: "Order details — Marketly" },
+      {
+        property: "og:description",
+        content: "View order products, shipping, payment, and delivery progress.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: OrderDetailsRouteComponent,
+});

@@ -51,7 +51,7 @@ import {
   ProductDialog,
 } from "./Dialogs";
 import { OrderStatusBadge, PageHeader, ProductImage, StatsCard, StockBadge } from "./Common";
-import { useAppState } from "./AppState";
+import { useAppState } from "./useAppState";
 import { authApi } from "@/api/auth.api";
 import { ApiError } from "@/api/client";
 

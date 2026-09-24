@@ -1,3 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { HomePage } from "@/components/marketplace/StorePages";
-export const Route = createFileRoute("/")({ head: () => ({ meta: [{ title: "Marketly — Curated Marketplace" }, { name: "description", content: "Shop curated products from trusted independent sellers." }, { property: "og:title", content: "Marketly — Curated Marketplace" }, { property: "og:description", content: "Shop curated products from trusted independent sellers." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }), component: HomePage });
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Marketly — Curated Marketplace" },
+      { name: "description", content: "Shop curated products from trusted independent sellers." },
+      { property: "og:title", content: "Marketly — Curated Marketplace" },
+      {
+        property: "og:description",
+        content: "Shop curated products from trusted independent sellers.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: HomePage,
+});

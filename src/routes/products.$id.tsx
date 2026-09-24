@@ -1,2 +1,27 @@
-import { createFileRoute } from "@tanstack/react-router"; import { ProductDetailsPage } from "@/components/marketplace/StorePages";
-export const Route = createFileRoute("/products/$id")({ head: () => ({ meta: [{ title: "Product details — Marketly" }, { name: "description", content: "View product details, pricing, availability, and seller information." }, { property: "og:title", content: "Product details — Marketly" }, { property: "og:description", content: "View product details, pricing, availability, and seller information." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }), component: () => <ProductDetailsPage id={Route.useParams().id} /> });
+import { createFileRoute } from "@tanstack/react-router";
+import { ProductDetailsPage } from "@/components/marketplace/StorePages";
+
+function ProductDetailsRouteComponent() {
+  const { id } = Route.useParams();
+  return <ProductDetailsPage id={id} />;
+}
+
+export const Route = createFileRoute("/products/$id")({
+  head: () => ({
+    meta: [
+      { title: "Product details — Marketly" },
+      {
+        name: "description",
+        content: "View product details, pricing, availability, and seller information.",
+      },
+      { property: "og:title", content: "Product details — Marketly" },
+      {
+        property: "og:description",
+        content: "View product details, pricing, availability, and seller information.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: ProductDetailsRouteComponent,
+});

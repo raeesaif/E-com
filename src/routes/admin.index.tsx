@@ -1,2 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router"; import { DashboardHome } from "@/components/marketplace/DashboardPages";
-export const Route = createFileRoute("/admin/")({ head: () => ({ meta: [{ title: "Marketplace Overview — Marketly Admin" }, { name: "description", content: "Review Marketly revenue, orders, sellers, customers, and product stock." }, { property: "og:title", content: "Marketplace Overview — Marketly Admin" }, { property: "og:description", content: "Review Marketly revenue, orders, sellers, customers, and product stock." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: () => <DashboardHome role="admin" /> });
+import { createFileRoute } from "@tanstack/react-router";
+import { DashboardHome } from "@/components/marketplace/DashboardPages";
+export const Route = createFileRoute("/admin/")({
+  head: () => ({
+    meta: [
+      { title: "Marketplace Overview — Marketly Admin" },
+      {
+        name: "description",
+        content: "Review Marketly revenue, orders, sellers, customers, and product stock.",
+      },
+      { property: "og:title", content: "Marketplace Overview — Marketly Admin" },
+      {
+        property: "og:description",
+        content: "Review Marketly revenue, orders, sellers, customers, and product stock.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: () => <DashboardHome role="admin" />,
+});

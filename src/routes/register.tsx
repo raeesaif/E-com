@@ -1,2 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router"; import { AuthPage } from "@/components/marketplace/AuthPages";
-export const Route = createFileRoute("/register")({ head: () => ({ meta: [{ title: "Register — Marketly" }, { name: "description", content: "Create a customer or seller account on Marketly." }, { property: "og:title", content: "Register — Marketly" }, { property: "og:description", content: "Create a customer or seller account on Marketly." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: () => <AuthPage register /> });
+import { createFileRoute } from "@tanstack/react-router";
+import { AuthPage } from "@/components/marketplace/AuthPages";
+export const Route = createFileRoute("/register")({
+  head: () => ({
+    meta: [
+      { title: "Register — Marketly" },
+      { name: "description", content: "Create a customer or seller account on Marketly." },
+      { property: "og:title", content: "Register — Marketly" },
+      { property: "og:description", content: "Create a customer or seller account on Marketly." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: () => <AuthPage register />,
+});

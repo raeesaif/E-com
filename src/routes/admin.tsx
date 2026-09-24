@@ -1,2 +1,27 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router"; import { AdminRoute, DashboardShell } from "@/components/marketplace/Shells";
-export const Route = createFileRoute("/admin")({ head: () => ({ meta: [{ title: "Admin Dashboard — Marketly" }, { name: "description", content: "Monitor marketplace sellers, customers, products, and orders." }, { property: "og:title", content: "Admin Dashboard — Marketly" }, { property: "og:description", content: "Monitor marketplace sellers, customers, products, and orders." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: () => <AdminRoute><DashboardShell role="admin"><Outlet /></DashboardShell></AdminRoute> });
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { AdminRoute, DashboardShell } from "@/components/marketplace/Shells";
+export const Route = createFileRoute("/admin")({
+  head: () => ({
+    meta: [
+      { title: "Admin Dashboard — Marketly" },
+      {
+        name: "description",
+        content: "Monitor marketplace sellers, customers, products, and orders.",
+      },
+      { property: "og:title", content: "Admin Dashboard — Marketly" },
+      {
+        property: "og:description",
+        content: "Monitor marketplace sellers, customers, products, and orders.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: () => (
+    <AdminRoute>
+      <DashboardShell role="admin">
+        <Outlet />
+      </DashboardShell>
+    </AdminRoute>
+  ),
+});

@@ -20,10 +20,11 @@ import {
   X,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Brand, ThemeToggle } from "./Common";
-import { useAppState } from "./AppState";
+import { useAppState } from "./useAppState";
 import type { Role } from "@/lib/marketplace";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +45,12 @@ export function Navbar() {
             <Link to="/shop">Shop</Link>
           </Button>
           <Button asChild variant="ghost">
+            <Link to="/about">About</Link>
+          </Button>
+          <Button asChild variant="ghost">
+            <Link to="/contact">Contact</Link>
+          </Button>
+          <Button asChild variant="ghost">
             <Link to="/orders">My orders</Link>
           </Button>
         </nav>
@@ -53,9 +60,14 @@ export function Navbar() {
             <Link to="/cart">
               <ShoppingBag />
               {cart.length > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                  className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground"
+                >
                   {cart.length}
-                </span>
+                </motion.span>
               )}
             </Link>
           </Button>
@@ -96,22 +108,66 @@ export function Navbar() {
           </Button>
         </div>
       </div>
-      {open && (
-        <nav className="page-shell grid gap-1 border-t py-3 md:hidden">
-          <Button asChild variant="ghost" className="justify-start">
-            <Link to="/">Home</Link>
-          </Button>
-          <Button asChild variant="ghost" className="justify-start">
-            <Link to="/shop">Shop</Link>
-          </Button>
-          <Button asChild variant="ghost" className="justify-start">
-            <Link to="/orders">My orders</Link>
-          </Button>
-          <Button asChild variant="ghost" className="justify-start">
-            <Link to="/login">Sign in</Link>
-          </Button>
-        </nav>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.nav
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="page-shell grid gap-1 border-t py-3 md:hidden overflow-hidden"
+          >
+            <Button
+              asChild
+              variant="ghost"
+              className="justify-start"
+              onClick={() => setOpen(false)}
+            >
+              <Link to="/">Home</Link>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              className="justify-start"
+              onClick={() => setOpen(false)}
+            >
+              <Link to="/shop">Shop</Link>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              className="justify-start"
+              onClick={() => setOpen(false)}
+            >
+              <Link to="/about">About</Link>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              className="justify-start"
+              onClick={() => setOpen(false)}
+            >
+              <Link to="/contact">Contact</Link>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              className="justify-start"
+              onClick={() => setOpen(false)}
+            >
+              <Link to="/orders">My orders</Link>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              className="justify-start"
+              onClick={() => setOpen(false)}
+            >
+              <Link to="/login">Sign in</Link>
+            </Button>
+          </motion.nav>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
