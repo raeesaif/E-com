@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   Box,
   DollarSign,
   Eye,
+  FolderTree,
   Loader2,
   Package,
   Pencil,
   Plus,
+  RefreshCw,
+  Search,
   ShoppingCart,
   Store,
   Trash2,
@@ -53,6 +57,8 @@ import {
 import { OrderStatusBadge, PageHeader, ProductImage, StatsCard, StockBadge } from "./Common";
 import { useAppState } from "./useAppState";
 import { authApi } from "@/api/auth.api";
+import { categoryApi, type CategoryItem } from "@/api/category.api";
+import { Switch } from "@/components/ui/switch";
 import { ApiError } from "@/api/client";
 
 const statSets = {
@@ -467,59 +473,461 @@ export function AdminProductsPage() {
 }
 
 export function CategoriesPage() {
-  const [items, setItems] = useState(
-    seedCategories.map((name, i) => ({ name, count: [482, 316, 524, 208, 174][i] ?? 0 })),
-  );
+  const { accessToken, user, role } = useAppState();
+  const [items, setItems] = useState<CategoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isLive, setIsLive] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive" | "unset">("all");
+
+  const isAdmin = role === "admin" || user?.role === "admin";
+
+  const fetchCategories = useCallback(async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    else setLoading(true);
+
+    try {
+      const liveData = await categoryApi.list();
+      setItems(liveData);
+      setIsLive(true);
+      if (isManual) {
+        toast.success("Categories refreshed from backend.");
+      }
+    } catch {
+      setIsLive(false);
+      setItems((prev) =>
+        prev.length > 0
+          ? prev
+          : seedCategories.map((name, i) => ({
+              _id: `seed-${i + 1}`,
+              name,
+              active: true,
+              productCount: [482, 316, 524, 208, 174][i] ?? 0,
+              description: `${name} goods, accessories, and gear.`,
+            })),
+      );
+      if (isManual) {
+        toast.error("Could not reach backend category service.");
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  const handleCreate = async ({
+    name,
+    description,
+    active,
+  }: {
+    name: string;
+    description?: string;
+    active?: boolean;
+  }) => {
+    const targetActive = active ?? true;
+    if (isLive) {
+      if (!accessToken) {
+        toast.error("Admin authentication required. Please log in as an administrator.");
+        throw new Error("Admin login required");
+      }
+      try {
+        const created = await categoryApi.create(
+          { name, description: description ?? "" },
+          accessToken,
+        );
+        // Explicitly set active status via PATCH upon creation so active is never undefined in the database
+        if (created?._id) {
+          await categoryApi.update(
+            created._id,
+            { name: created.name, active: targetActive },
+            accessToken,
+          );
+        }
+        toast.success(
+          `Category "${created.name}" created successfully as ${targetActive ? "Active" : "Inactive"}.`,
+        );
+        await fetchCategories();
+      } catch (err: unknown) {
+        const message = err instanceof ApiError ? err.message : "Failed to create category.";
+        toast.error(message);
+        throw err;
+      }
+    } else {
+      const newCat: CategoryItem = {
+        _id: `cat-${Date.now()}`,
+        name,
+        description,
+        active: targetActive,
+        productCount: 0,
+      };
+      setItems((prev) => [newCat, ...prev]);
+      toast.success(`Category "${name}" created (demo mode).`);
+    }
+  };
+
+  const handleUpdate = async (id: string, { name, active }: { name: string; active?: boolean }) => {
+    if (isLive) {
+      if (!accessToken) {
+        toast.error("Admin authentication required. Please log in as an administrator.");
+        throw new Error("Admin login required");
+      }
+      try {
+        const updated = await categoryApi.update(
+          id,
+          { name, active: Boolean(active) },
+          accessToken,
+        );
+        toast.success(`Category "${updated.name}" updated successfully.`);
+        await fetchCategories();
+      } catch (err: unknown) {
+        const message = err instanceof ApiError ? err.message : "Failed to update category.";
+        toast.error(message);
+        throw err;
+      }
+    } else {
+      setItems((prev) =>
+        prev.map((c) => (c._id === id ? { ...c, name, active: Boolean(active) } : c)),
+      );
+      toast.success(`Category "${name}" updated (demo mode).`);
+    }
+  };
+
+  const handleToggleActive = async (item: CategoryItem) => {
+    const nextActive = !item.active;
+    if (isLive) {
+      if (!accessToken) {
+        toast.error("Admin authentication required to change status.");
+        return;
+      }
+      try {
+        await categoryApi.update(item._id, { name: item.name, active: nextActive }, accessToken);
+        toast.success(`Category "${item.name}" marked as ${nextActive ? "Active" : "Inactive"}.`);
+        await fetchCategories();
+      } catch (err: unknown) {
+        const message = err instanceof ApiError ? err.message : "Failed to change category status.";
+        toast.error(message);
+      }
+    } else {
+      setItems((prev) => prev.map((c) => (c._id === item._id ? { ...c, active: nextActive } : c)));
+      toast.success(
+        `Category "${item.name}" marked as ${nextActive ? "Active" : "Inactive"} (demo mode).`,
+      );
+    }
+  };
+
+  const handleDelete = async (item: CategoryItem) => {
+    if (isLive) {
+      if (!accessToken) {
+        toast.error("Admin authentication required to delete categories.");
+        return;
+      }
+      try {
+        await categoryApi.remove(item._id, accessToken);
+        toast.success(`Category "${item.name}" deleted successfully.`);
+        await fetchCategories();
+      } catch (err: unknown) {
+        const message = err instanceof ApiError ? err.message : "Failed to delete category.";
+        toast.error(message);
+      }
+    } else {
+      setItems((prev) => prev.filter((c) => c._id !== item._id));
+      toast.success(`Category "${item.name}" removed (demo mode).`);
+    }
+  };
+
+  // Metrics
+  const totalCategories = items.length;
+  const activeCount = items.filter((i) => Boolean(i.active)).length;
+  const inactiveCount = totalCategories - activeCount;
+  const totalAssignedProducts = items.reduce((acc, curr) => acc + (curr.productCount ?? 0), 0);
+
+  // Filtered categories
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const q = search.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        (item.description && item.description.toLowerCase().includes(q));
+
+      if (!matchesSearch) return false;
+
+      if (statusFilter === "active") return Boolean(item.active);
+      if (statusFilter === "inactive") return !item.active;
+      return true;
+    });
+  }, [items, search, statusFilter]);
+
   return (
-    <div>
+    <div className="space-y-6">
+      {/* Top Header */}
       <PageHeader
-        title="Categories"
-        description="Keep the marketplace catalog organized."
+        title="Category Management"
+        description="Organize your catalog hierarchy, control visibility, and monitor real-time product counts."
         action={
           <CategoryDialog
-            onSave={(name) => setItems((v) => [...v, { name, count: 0 }])}
+            onSave={handleCreate}
             trigger={
-              <Button>
-                <Plus /> Add category
+              <Button className="gap-2">
+                <Plus className="size-4" /> Add Category
               </Button>
             }
           />
         }
       />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {items.map((item) => (
-          <div className="panel flex items-center gap-4 p-5" key={item.name}>
-            <span className="grid size-10 place-items-center rounded-md bg-secondary text-secondary-foreground">
-              <Box />
-            </span>
-            <div className="flex-1">
-              <p className="font-display font-bold">{item.name}</p>
-              <p className="text-sm text-muted-foreground">{item.count} products</p>
-            </div>
-            <CategoryDialog
-              category={item.name}
-              onSave={(name) =>
-                setItems((v) => v.map((x) => (x.name === item.name ? { ...x, name } : x)))
-              }
-              trigger={
-                <Button variant="ghost" size="icon">
-                  <Pencil />
-                </Button>
-              }
-            />
-            <ConfirmDialog
-              title="Delete category?"
-              description="Products will remain but require a new category."
-              onConfirm={() => setItems((v) => v.filter((x) => x.name !== item.name))}
-              trigger={
-                <Button variant="ghost" size="icon" className="text-destructive">
-                  <Trash2 />
-                </Button>
-              }
-            />
+
+      {/* KPI Cards */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="panel p-4">
+          <p className="text-xs font-medium text-muted-foreground">Total Categories</p>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className="text-2xl font-bold font-display">{totalCategories}</span>
+            <FolderTree className="size-4 text-muted-foreground/60" />
           </div>
-        ))}
+        </div>
+
+        <div className="panel p-4">
+          <p className="text-xs font-medium text-muted-foreground">Active Categories</p>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className="text-2xl font-bold font-display text-emerald-600 dark:text-emerald-400">
+              {activeCount}
+            </span>
+            <span className="size-2 rounded-full bg-emerald-500" />
+          </div>
+        </div>
+
+        <div className="panel p-4">
+          <p className="text-xs font-medium text-muted-foreground">Inactive Categories</p>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className="text-2xl font-bold font-display text-amber-600 dark:text-amber-400">
+              {inactiveCount}
+            </span>
+            <span className="size-2 rounded-full bg-amber-500" />
+          </div>
+        </div>
+
+        <div className="panel p-4">
+          <p className="text-xs font-medium text-muted-foreground">Assigned Products</p>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className="text-2xl font-bold font-display">{totalAssignedProducts}</span>
+            <Package className="size-4 text-muted-foreground/60" />
+          </div>
+        </div>
       </div>
+
+      {/* Filter Toolbar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search categories by name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex rounded-lg border bg-muted/40 p-1">
+            <Button
+              variant={statusFilter === "all" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 text-xs px-2.5"
+              onClick={() => setStatusFilter("all")}
+            >
+              All ({totalCategories})
+            </Button>
+            <Button
+              variant={statusFilter === "active" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 text-xs px-2.5 text-emerald-600 dark:text-emerald-400"
+              onClick={() => setStatusFilter("active")}
+            >
+              Active ({activeCount})
+            </Button>
+            <Button
+              variant={statusFilter === "inactive" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 text-xs px-2.5 text-destructive"
+              onClick={() => setStatusFilter("inactive")}
+            >
+              Inactive ({inactiveCount})
+            </Button>
+          </div>
+
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={() => fetchCategories(true)}
+            disabled={refreshing || loading}
+            title="Refresh category catalog"
+          >
+            <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+      </div>
+
+      {/* Grid Display */}
+      {loading ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((idx) => (
+            <div key={idx} className="panel flex items-center gap-4 p-5 animate-pulse">
+              <div className="size-11 rounded-lg bg-muted" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-1/2 bg-muted rounded" />
+                <div className="h-3 w-1/3 bg-muted rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="panel flex flex-col items-center justify-center p-12 text-center">
+          <div className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground mb-3">
+            <FolderTree className="size-6" />
+          </div>
+          <h3 className="font-display font-semibold text-lg">No categories found</h3>
+          <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+            {search
+              ? `No categories match "${search}". Try clearing your search filter.`
+              : "Get started by adding your first category to group catalog items."}
+          </p>
+          {search ? (
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => setSearch("")}>
+              Clear search
+            </Button>
+          ) : (
+            <CategoryDialog
+              onSave={handleCreate}
+              trigger={
+                <Button size="sm" className="mt-4 gap-1.5">
+                  <Plus className="size-4" /> Add category
+                </Button>
+              }
+            />
+          )}
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filteredItems.map((item) => {
+            const hasProducts = (item.productCount ?? 0) > 0;
+            const isActive = Boolean(item.active);
+
+            return (
+              <div
+                className="panel flex flex-col justify-between p-5 transition-all hover:border-primary/40 hover:shadow-sm"
+                key={item._id || item.name}
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-secondary text-secondary-foreground font-semibold">
+                        <Box className="size-5" />
+                      </span>
+                      <div>
+                        <h4 className="font-display font-bold text-base leading-snug">
+                          {item.name}
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <Package className="size-3.5 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground font-medium">
+                            {item.productCount ?? 0}{" "}
+                            {item.productCount === 1 ? "product" : "products"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status Badge */}
+                    {isActive ? (
+                      <Badge
+                        variant="outline"
+                        className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[11px] font-medium"
+                      >
+                        <span className="size-1.5 rounded-full bg-emerald-500" />
+                        Active
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="gap-1 border-destructive/30 bg-destructive/10 text-destructive text-[11px] font-medium"
+                      >
+                        <span className="size-1.5 rounded-full bg-destructive" />
+                        Inactive
+                      </Badge>
+                    )}
+                  </div>
+
+                  {item.description && (
+                    <p className="mt-3 text-xs text-muted-foreground line-clamp-2">
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-4 pt-3 border-t flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id={`switch-${item._id || item.name}`}
+                      checked={Boolean(item.active)}
+                      onCheckedChange={() => handleToggleActive(item)}
+                      aria-label="Toggle active status"
+                    />
+                    <label
+                      htmlFor={`switch-${item._id || item.name}`}
+                      className="text-xs text-muted-foreground cursor-pointer select-none"
+                    >
+                      {item.active ? "Active" : "Inactive"}
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <CategoryDialog
+                      category={item}
+                      onSave={(val) => handleUpdate(item._id, val)}
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          title="Edit category"
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      }
+                    />
+
+                    <ConfirmDialog
+                      title={`Delete "${item.name}"?`}
+                      description={
+                        hasProducts
+                          ? `⚠️ Warning: This category currently has ${item.productCount} product(s) referencing it. The backend performs a hard delete without cascade, so these products will remain in the database as orphaned records without any category. Are you sure you want to proceed?`
+                          : `Are you sure you want to delete "${item.name}"? This action cannot be undone.`
+                      }
+                      onConfirm={() => handleDelete(item)}
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          title="Delete category"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

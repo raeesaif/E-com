@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { ImagePlus, Trash2, Upload } from "lucide-react";
+import { ImagePlus, Loader2, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import type { CategoryItem } from "@/api/category.api";
 import {
   Dialog,
   DialogContent,
@@ -336,42 +338,216 @@ export function ProductDialog({
     </Dialog>
   );
 }
+export interface CategoryFormValues {
+  name: string;
+  description?: string;
+  active?: boolean;
+}
+
 export function CategoryDialog({
   category,
   trigger,
   onSave,
 }: {
-  category?: string;
+  category?: CategoryItem | string;
   trigger: React.ReactNode;
-  onSave: (value: string) => void;
+  onSave: (values: CategoryFormValues) => Promise<void> | void;
 }) {
-  const [value, setValue] = useState(category ?? "");
+  const isEdit = Boolean(category);
+  const catObj: CategoryItem | null =
+    typeof category === "object" && category !== null ? category : null;
+
   const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [active, setActive] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setError(null);
+      if (typeof category === "string") {
+        setName(category);
+        setDescription("");
+        setActive(true);
+      } else if (catObj) {
+        setName(catObj.name || "");
+        setDescription(catObj.description || "");
+        setActive(catObj.active ?? false);
+      } else {
+        setName("");
+        setDescription("");
+        setActive(true);
+      }
+    }
+  }, [open, category, catObj]);
+
+  const handleSave = async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setError("Category name cannot be empty.");
+      return;
+    }
+    if (!isEdit) {
+      const trimmedDesc = description.trim();
+      if (!trimmedDesc) {
+        setError("Category description is required.");
+        return;
+      }
+      if (trimmedDesc.length > 500) {
+        setError("Category description cannot exceed 500 characters.");
+        return;
+      }
+    }
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      await onSave({
+        name: trimmedName,
+        description: description.trim(),
+        active,
+      });
+      setOpen(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save category.";
+      setError(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{category ? "Edit category" : "Add category"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Category" : "Create New Category"}</DialogTitle>
           <DialogDescription>
-            Categories organize products across the marketplace.
+            {isEdit
+              ? "Update category naming and catalog visibility."
+              : "Define a new category to group and organize marketplace merchandise."}
           </DialogDescription>
         </DialogHeader>
-        <div>
-          <Label htmlFor="category">Category name</Label>
-          <Input id="category" value={value} onChange={(event) => setValue(event.target.value)} />
+
+        {error && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="category-name">
+              Category Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="category-name"
+              placeholder="e.g. Footwear, Electronics, Home Living"
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                if (error) setError(null);
+              }}
+              disabled={submitting}
+            />
+          </div>
+
+          {!isEdit ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="category-description">
+                  Description <span className="text-destructive">*</span>
+                </Label>
+                <span
+                  className={`text-xs ${
+                    description.length > 500
+                      ? "text-destructive font-semibold"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {description.length} / 500
+                </span>
+              </div>
+              <Textarea
+                id="category-description"
+                placeholder="Write a clear description of the items and accessories in this category (up to 500 chars)..."
+                rows={3}
+                value={description}
+                onChange={(event) => {
+                  setDescription(event.target.value);
+                  if (error) setError(null);
+                }}
+                disabled={submitting}
+              />
+              <p className="text-xs text-muted-foreground">
+                Required for catalog SEO and marketplace grouping.
+              </p>
+            </div>
+          ) : (
+            catObj?.description && (
+              <div className="rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Current description:</span>{" "}
+                {catObj.description}
+                <p className="mt-1 text-[11px] italic">
+                  Note: Backend category update endpoint updates name and status.
+                </p>
+              </div>
+            )
+          )}
+
+          {/* Active Status toggle for both create and edit */}
+          <div className="flex items-center justify-between rounded-lg border bg-muted/40 p-3.5">
+            <div className="space-y-0.5 pr-2">
+              <Label
+                htmlFor="category-active-toggle"
+                className="text-sm font-semibold cursor-pointer"
+              >
+                Catalog Status
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {active ? (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    Active — visible in marketplace navigation & product filters
+                  </span>
+                ) : (
+                  <span className="text-amber-600 dark:text-amber-400 font-medium">
+                    Inactive — hidden from public marketplace browsing
+                  </span>
+                )}
+              </p>
+            </div>
+            <Switch
+              id="category-active-toggle"
+              checked={active}
+              onCheckedChange={setActive}
+              disabled={submitting}
+            />
+          </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" disabled={submitting} onClick={() => setOpen(false)}>
             Cancel
           </Button>
           <Button
-            onClick={() => {
-              onSave(value);
-              setOpen(false);
-            }}
+            disabled={
+              submitting ||
+              !name.trim() ||
+              (!isEdit && (!description.trim() || description.length > 500))
+            }
+            onClick={handleSave}
           >
-            Save category
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+              </>
+            ) : isEdit ? (
+              "Save Changes"
+            ) : (
+              "Create Category"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
