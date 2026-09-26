@@ -65,16 +65,18 @@ export function Brand({ compact = false }: { compact?: boolean }) {
 }
 
 export function ProductImage({ product, className }: { product: Product; className?: string }) {
+  const hasCustomImage = Boolean(product.productImage);
+  const imageSrc = product.productImage || productCollection;
   return (
     <div className={cn("overflow-hidden bg-muted", className)}>
       <img
-        src={productCollection}
+        src={imageSrc}
         alt={product.name}
         width={1536}
         height={1024}
         loading="lazy"
         className="h-full w-full object-cover transition-transform duration-500 ease-out hover:scale-105"
-        style={{ objectPosition: product.imagePosition }}
+        style={hasCustomImage ? undefined : { objectPosition: product.imagePosition }}
       />
     </div>
   );

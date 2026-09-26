@@ -18,6 +18,7 @@ export interface AppStateValue {
   products: Product[];
   saveProduct: (product: Product) => void;
   deleteProduct: (id: string) => void;
+  refreshProducts: () => Promise<void>;
 }
 
 export const AppState = createContext<AppStateValue | null>(null);

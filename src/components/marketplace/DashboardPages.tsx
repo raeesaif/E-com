@@ -3,15 +3,20 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   Box,
+  Calendar,
+  CheckCircle2,
+  Clock,
   DollarSign,
   Eye,
   FolderTree,
+  KeyRound,
   Loader2,
   Package,
   Pencil,
   Plus,
   RefreshCw,
   Search,
+  ShieldCheck,
   ShoppingCart,
   Store,
   Trash2,
@@ -43,6 +48,7 @@ import {
   money,
   orders,
   sellers,
+  stockStatus,
   type OrderStatus,
   type Product,
 } from "@/lib/marketplace";
@@ -53,11 +59,13 @@ import {
   OrderDetailsDialog,
   OrderStatusDialog,
   ProductDialog,
+  ProductDetailsDialog,
 } from "./Dialogs";
 import { OrderStatusBadge, PageHeader, ProductImage, StatsCard, StockBadge } from "./Common";
 import { useAppState } from "./useAppState";
 import { authApi } from "@/api/auth.api";
 import { categoryApi, type CategoryItem } from "@/api/category.api";
+import { productApi } from "@/api/product.api";
 import { Switch } from "@/components/ui/switch";
 import { ApiError } from "@/api/client";
 
@@ -181,22 +189,75 @@ export function DashboardHome({ role }: { role: "seller" | "admin" }) {
 }
 
 export function SellerProductsPage() {
-  const { products, saveProduct, deleteProduct } = useAppState();
-  const mine = products.filter((p) => p.seller === "North & Pine");
+  const { products, saveProduct, deleteProduct, user, accessToken, refreshProducts } =
+    useAppState();
+
+  const sellerProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (user?.storeName && p.seller?.toLowerCase() === user.storeName.toLowerCase()) return true;
+      if (user?.name && p.seller?.toLowerCase() === user.name.toLowerCase()) return true;
+      return false;
+    });
+  }, [products, user]);
+
+  const mine = useMemo(() => {
+    if (user && (user.storeName || user.name)) {
+      return sellerProducts.length > 0
+        ? sellerProducts
+        : user.role === "seller"
+          ? []
+          : products.filter((p) => p.seller === "North & Pine");
+    }
+    return products.filter((p) => p.seller === "North & Pine");
+  }, [products, user, sellerProducts]);
+
+  const handleDelete = async (p: Product) => {
+    if (p._id && accessToken) {
+      try {
+        await productApi.remove(p._id, accessToken);
+        toast.success("Product deleted successfully");
+      } catch {
+        // Backend note §4: DELETE is not wired on router level yet (returns 404)
+        toast.info(
+          "Backend route DELETE /products/:id is not wired yet; removed from local catalog preview.",
+        );
+      }
+    } else {
+      toast.success("Product removed from catalog");
+    }
+    deleteProduct(p.id);
+  };
+
   return (
     <div>
       <PageHeader
         title="My products"
         description="Manage your catalog, pricing, images, and stock."
         action={
-          <ProductDialog
-            onSave={saveProduct}
-            trigger={
-              <Button>
-                <Plus /> Add Product
-              </Button>
-            }
-          />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={async () => {
+                if (refreshProducts) {
+                  toast.promise(refreshProducts(), {
+                    loading: "Refreshing products...",
+                    success: "Products refreshed",
+                    error: "Failed to refresh products",
+                  });
+                }
+              }}
+            >
+              <RefreshCw className="size-4 mr-1" /> Refresh
+            </Button>
+            <ProductDialog
+              onSave={saveProduct}
+              trigger={
+                <Button>
+                  <Plus className="size-4 mr-1" /> Add Product
+                </Button>
+              }
+            />
+          </div>
         }
       />
       <DataWrap>
@@ -219,50 +280,63 @@ export function SellerProductsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mine.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell>
-                  <ProductImage product={p} className="size-11 rounded-md" />
-                </TableCell>
-                <TableCell className="font-bold">{p.name}</TableCell>
-                <TableCell>{p.category}</TableCell>
-                <TableCell>{money(p.price)}</TableCell>
-                <TableCell>{p.discount}%</TableCell>
-                <TableCell className="font-semibold">{money(finalPrice(p))}</TableCell>
-                <TableCell>{p.stock}</TableCell>
-                <TableCell>
-                  <StockBadge stock={p.stock} />
-                </TableCell>
-                <TableCell>
-                  <div className="flex">
-                    <ProductDialog
-                      product={p}
-                      onSave={saveProduct}
-                      trigger={
-                        <Button variant="ghost" size="icon" aria-label="Edit product">
-                          <Pencil />
-                        </Button>
-                      }
-                    />
-                    <ConfirmDialog
-                      title="Delete product?"
-                      description="This removes the product from your local catalog preview."
-                      onConfirm={() => deleteProduct(p.id)}
-                      trigger={
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive"
-                          aria-label="Delete product"
-                        >
-                          <Trash2 />
-                        </Button>
-                      }
-                    />
-                  </div>
+            {mine.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                  No products found. Click "Add Product" to add your first product!
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              mine.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell>
+                    <ProductImage product={p} className="size-11 rounded-md" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-bold">{p.name}</div>
+                    {p.productId && (
+                      <div className="text-xs text-muted-foreground font-mono">{p.productId}</div>
+                    )}
+                  </TableCell>
+                  <TableCell>{p.category}</TableCell>
+                  <TableCell>{money(p.price)}</TableCell>
+                  <TableCell>{p.discount}%</TableCell>
+                  <TableCell className="font-semibold">{money(finalPrice(p))}</TableCell>
+                  <TableCell>{p.stock}</TableCell>
+                  <TableCell>
+                    <StockBadge stock={p.stock} />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex">
+                      <ProductDialog
+                        product={p}
+                        onSave={saveProduct}
+                        trigger={
+                          <Button variant="ghost" size="icon" aria-label="Edit product">
+                            <Pencil />
+                          </Button>
+                        }
+                      />
+                      <ConfirmDialog
+                        title="Delete product?"
+                        description="This removes the product from your catalog."
+                        onConfirm={() => handleDelete(p)}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            aria-label="Delete product"
+                          >
+                            <Trash2 />
+                          </Button>
+                        }
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </DataWrap>
@@ -289,16 +363,16 @@ export function OrdersManagementPage({ admin = false }: { admin?: boolean }) {
               {(admin
                 ? ["Order ID", "Customer", "Seller", "Amount", "Payment", "Status", "Date", ""]
                 : [
-                    "Order ID",
-                    "Customer",
-                    "Product",
-                    "Qty",
-                    "Amount",
-                    "Payment",
-                    "Status",
-                    "Date",
-                    "",
-                  ]
+                  "Order ID",
+                  "Customer",
+                  "Product",
+                  "Qty",
+                  "Amount",
+                  "Payment",
+                  "Status",
+                  "Date",
+                  "",
+                ]
               ).map((h) => (
                 <TableHead key={h}>{h}</TableHead>
               ))}
@@ -403,26 +477,95 @@ export function PeoplePage({ type }: { type: "sellers" | "customers" }) {
 }
 
 export function AdminProductsPage() {
-  const { products } = useAppState();
+  const { products, refreshProducts } = useAppState();
   const [search, setSearch] = useState("");
-  const shown = products.filter((p) =>
-    `${p.name} ${p.seller}`.toLowerCase().includes(search.toLowerCase()),
-  );
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [sellerFilter, setSellerFilter] = useState("all");
+  const [stockFilter, setStockFilter] = useState("all");
+
+  const dynamicCategories = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => {
+      if (p.category) set.add(p.category);
+    });
+    return Array.from(set);
+  }, [products]);
+
+  const dynamicSellers = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => {
+      const sellerFullName = [p.sellerDetails?.firstName, p.sellerDetails?.lastName]
+        .filter(Boolean)
+        .join(" ");
+      const name = sellerFullName || p.seller;
+      if (name) set.add(name);
+    });
+    return Array.from(set);
+  }, [products]);
+
+  const shown = useMemo(() => {
+    return products.filter((p) => {
+      const sellerFullName = [p.sellerDetails?.firstName, p.sellerDetails?.lastName]
+        .filter(Boolean)
+        .join(" ");
+      const sellerDisplayName = sellerFullName || p.seller || "";
+      const storeName = p.storeName || "";
+      const sDetails = p.sellerDetails;
+      const combined = `${p.name} ${sellerDisplayName} ${storeName} ${p.productId || ""} ${sDetails?.email || ""}`.toLowerCase();
+      if (!combined.includes(search.toLowerCase())) return false;
+      if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
+      if (sellerFilter !== "all" && sellerDisplayName !== sellerFilter && storeName !== sellerFilter) return false;
+      if (stockFilter !== "all" && stockStatus(p.stock) !== stockFilter) return false;
+      return true;
+    });
+  }, [products, search, categoryFilter, sellerFilter, stockFilter]);
+
   return (
     <div>
       <PageHeader
         title="All products"
         description="Review products across every marketplace seller."
+        action={
+          <Button
+            variant="outline"
+            onClick={async () => {
+              if (refreshProducts) {
+                toast.promise(refreshProducts(), {
+                  loading: "Refreshing products...",
+                  success: "Products refreshed",
+                  error: "Failed to refresh products",
+                });
+              }
+            }}
+          >
+            <RefreshCw className="size-4 mr-1" /> Refresh
+          </Button>
+        }
       />
       <div className="mb-4 grid gap-3 sm:grid-cols-4">
         <Input
-          placeholder="Search products or sellers"
+          placeholder="Search products or sellers..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <FilterSelect label="All categories" items={seedCategories} />
-        <FilterSelect label="All sellers" items={sellers.map((s) => s.name)} />
-        <FilterSelect label="All stock" items={["In Stock", "Low Stock", "Out of Stock"]} />
+        <FilterSelect
+          label="All categories"
+          items={dynamicCategories.length > 0 ? dynamicCategories : seedCategories}
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+        />
+        <FilterSelect
+          label="All sellers"
+          items={dynamicSellers.length > 0 ? dynamicSellers : sellers.map((s) => s.name)}
+          value={sellerFilter}
+          onChange={setSellerFilter}
+        />
+        <FilterSelect
+          label="All stock"
+          items={["In Stock", "Low Stock", "Out of Stock"]}
+          value={stockFilter}
+          onChange={setStockFilter}
+        />
       </div>
       <DataWrap>
         <Table>
@@ -444,27 +587,58 @@ export function AdminProductsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {shown.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell>
-                  <ProductImage product={p} className="size-11 rounded-md" />
-                </TableCell>
-                <TableCell className="font-bold">{p.name}</TableCell>
-                <TableCell>{p.seller}</TableCell>
-                <TableCell>{p.category}</TableCell>
-                <TableCell>{money(p.price)}</TableCell>
-                <TableCell>{p.discount}%</TableCell>
-                <TableCell>{p.stock}</TableCell>
-                <TableCell>
-                  <StockBadge stock={p.stock} />
-                </TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="icon" aria-label="View product">
-                    <Eye />
-                  </Button>
+            {shown.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                  No products found matching your search and filter criteria.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              shown.map((p) => {
+                const sellerFullName =
+                  [p.sellerDetails?.firstName, p.sellerDetails?.lastName]
+                    .filter(Boolean)
+                    .join(" ") || p.seller;
+                return (
+                  <TableRow key={p.id}>
+                    <TableCell>
+                      <ProductImage product={p} className="size-11 rounded-md" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-bold">{p.name}</div>
+                      {p.productId && (
+                        <div className="text-xs text-muted-foreground font-mono">{p.productId}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium text-foreground">
+                      {sellerFullName}
+                    </TableCell>
+                    <TableCell>{p.category}</TableCell>
+                    <TableCell>{money(p.price)}</TableCell>
+                    <TableCell>{p.discount}%</TableCell>
+                    <TableCell>{p.stock}</TableCell>
+                    <TableCell>
+                      <StockBadge stock={p.stock} />
+                    </TableCell>
+                    <TableCell>
+                      <ProductDetailsDialog
+                        product={p}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="View product details"
+                            title="View product details"
+                          >
+                            <Eye className="size-4" />
+                          </Button>
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </DataWrap>
@@ -500,12 +674,12 @@ export function CategoriesPage() {
         prev.length > 0
           ? prev
           : seedCategories.map((name, i) => ({
-              _id: `seed-${i + 1}`,
-              name,
-              active: true,
-              productCount: [482, 316, 524, 208, 174][i] ?? 0,
-              description: `${name} goods, accessories, and gear.`,
-            })),
+            _id: `seed-${i + 1}`,
+            name,
+            active: true,
+            productCount: [482, 316, 524, 208, 174][i] ?? 0,
+            description: `${name} goods, accessories, and gear.`,
+          })),
       );
       if (isManual) {
         toast.error("Could not reach backend category service.");
@@ -932,22 +1106,50 @@ export function CategoriesPage() {
   );
 }
 
-export function DashboardProfile({ seller = false }: { seller?: boolean }) {
+export function DashboardProfile({
+  seller = false,
+  admin = false,
+}: {
+  seller?: boolean;
+  admin?: boolean;
+}) {
   const { user, accessToken, updateUser } = useAppState();
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (accessToken) {
+      authApi
+        .getMe(accessToken)
+        .then(({ data }) => {
+          if (data) {
+            updateUser(data);
+            setFirstName(data.firstName || "");
+            setLastName(data.lastName || "");
+          }
+        })
+        .catch(() => undefined);
+    }
+  }, [accessToken, updateUser]);
 
   const saveChanges = async () => {
     if (!accessToken) {
       toast.error("You need to be signed in to update your profile.");
       return;
     }
+    if (!firstName.trim() || !lastName.trim()) {
+      toast.error("First name and last name are required.");
+      return;
+    }
     setSaving(true);
     try {
-      const { data } = await authApi.updateProfile({ firstName, lastName }, accessToken);
+      const { data } = await authApi.updateProfile(
+        { firstName: firstName.trim(), lastName: lastName.trim() },
+        accessToken,
+      );
       updateUser(data);
-      toast.success("Profile updated.");
+      toast.success("Profile updated successfully.");
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Could not update profile.");
     } finally {
@@ -955,69 +1157,155 @@ export function DashboardProfile({ seller = false }: { seller?: boolean }) {
     }
   };
 
+  const initials = `${(user?.firstName?.[0] || firstName?.[0] || "U").toUpperCase()}${(user?.lastName?.[0] || lastName?.[0] || "A").toUpperCase()}`;
+  const effectiveRole = user?.role || (admin ? "admin" : seller ? "seller" : "customer");
+
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl space-y-6">
       <PageHeader
-        title="Profile"
+        title={admin ? "Admin Profile" : seller ? "Seller Profile" : "Profile"}
         description={
-          seller ? "Manage your shop and contact information." : "Manage your account details."
+          admin
+            ? "Manage your administrator account details, security credentials, and identity."
+            : seller
+              ? "Manage your shop and contact information."
+              : "Manage your account details."
         }
       />
-      <div className="panel grid gap-4 p-6 sm:grid-cols-2" key={user?._id ?? "loading"}>
-        <label className="text-sm font-medium">
-          First name
-          <Input
-            className="mt-1.5"
-            value={firstName}
-            onChange={(event) => setFirstName(event.target.value)}
-          />
-        </label>
-        <label className="text-sm font-medium">
-          Last name
-          <Input
-            className="mt-1.5"
-            value={lastName}
-            onChange={(event) => setLastName(event.target.value)}
-          />
-        </label>
-        {seller && (
-          <label className="text-sm font-medium">
-            Store name
-            <Input
-              className="mt-1.5 cursor-not-allowed opacity-70"
-              defaultValue={user?.storeName ?? ""}
-              disabled
-              title="Store name can't be changed here."
-            />
-          </label>
-        )}
-        <label className="text-sm font-medium">
-          Email
-          <Input
-            className="mt-1.5 cursor-not-allowed opacity-70"
-            defaultValue={user?.email ?? ""}
-            disabled
-            title="Email can't be changed here."
-          />
-        </label>
-        <div className="text-sm font-medium">
-          Verified
-          <div className="mt-1.5">
-            {user?.isVerified ? (
-              <Badge className="bg-success text-success-foreground shadow-none">Verified</Badge>
-            ) : (
-              <Badge variant="secondary">Not verified</Badge>
-            )}
+
+      {/* User Header / Hero Card */}
+      <div className="panel p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="size-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-xl ring-2 ring-primary/20 shrink-0">
+            {initials}
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-bold font-display">
+                {user?.firstName || firstName} {user?.lastName || lastName}
+              </h2>
+              <Badge variant="outline" className="capitalize font-semibold border-primary/30 text-primary bg-primary/5 flex items-center gap-1">
+                {admin && <ShieldCheck className="size-3.5" />}
+                {effectiveRole}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">{user?.email}</p>
           </div>
         </div>
-        <div className="flex gap-3 sm:col-span-2">
+
+        <div>
+          {user?.isVerified ? (
+            <Badge className="bg-success text-success-foreground border-none flex items-center gap-1 shadow-none">
+              <CheckCircle2 className="size-3.5" /> Verified
+            </Badge>
+          ) : (
+            <Badge variant="secondary">Not verified</Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Profile Form Panel */}
+      <div className="panel p-6" key={user?._id ?? "loading"}>
+        <h3 className="text-base font-semibold mb-4">Personal Information</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="text-sm font-medium">
+            First name *
+            <Input
+              className="mt-1.5"
+              value={firstName}
+              onChange={(event) => setFirstName(event.target.value)}
+              placeholder="First name"
+            />
+          </label>
+
+          <label className="text-sm font-medium">
+            Last name *
+            <Input
+              className="mt-1.5"
+              value={lastName}
+              onChange={(event) => setLastName(event.target.value)}
+              placeholder="Last name"
+            />
+          </label>
+
+          {seller && (
+            <label className="text-sm font-medium sm:col-span-2">
+              Store name
+              <Input
+                className="mt-1.5 cursor-not-allowed opacity-70 bg-muted/50"
+                defaultValue={user?.storeName ?? ""}
+                disabled
+                title="Store name can't be changed here."
+              />
+            </label>
+          )}
+
+          <label className="text-sm font-medium">
+            Email address
+            <Input
+              className="mt-1.5 cursor-not-allowed opacity-70 bg-muted/50"
+              defaultValue={user?.email ?? ""}
+              disabled
+              title="Email address cannot be changed."
+            />
+          </label>
+
+          <label className="text-sm font-medium">
+            Role
+            <Input
+              className="mt-1.5 cursor-not-allowed opacity-70 bg-muted/50 capitalize font-medium"
+              value={effectiveRole}
+              disabled
+            />
+          </label>
+
+          {user?.createdAt && (
+            <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+              <Calendar className="size-3.5 text-muted-foreground/70" />
+              <span>
+                Account created:{" "}
+                <strong className="text-foreground">
+                  {new Date(user.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </strong>
+              </span>
+            </div>
+          )}
+
+          {user?.updatedAt && (
+            <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+              <Clock className="size-3.5 text-muted-foreground/70" />
+              <span>
+                Last updated:{" "}
+                <strong className="text-foreground">
+                  {new Date(user.updatedAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </strong>
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 pt-6 border-t mt-6">
           <Button disabled={saving} onClick={saveChanges}>
-            {saving ? <Loader2 className="animate-spin" /> : null}
+            {saving && <Loader2 className="animate-spin size-4 mr-1.5" />}
             Save changes
           </Button>
           <ChangePasswordDialog
             accessToken={accessToken}
-            trigger={<Button variant="outline">Change password</Button>}
+            trigger={
+              <Button variant="outline">
+                <KeyRound className="size-4 mr-1.5" /> Change password
+              </Button>
+            }
           />
         </div>
       </div>
@@ -1027,11 +1315,21 @@ export function DashboardProfile({ seller = false }: { seller?: boolean }) {
 function DataWrap({ children }: { children: React.ReactNode }) {
   return <div className="panel overflow-hidden">{children}</div>;
 }
-function FilterSelect({ label, items }: { label: string; items: string[] }) {
+function FilterSelect({
+  label,
+  items,
+  value,
+  onChange,
+}: {
+  label: string;
+  items: string[];
+  value?: string;
+  onChange?: (val: string) => void;
+}) {
   return (
-    <Select defaultValue="all">
+    <Select value={value ?? "all"} onValueChange={onChange}>
       <SelectTrigger>
-        <SelectValue />
+        <SelectValue placeholder={label} />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="all">{label}</SelectItem>

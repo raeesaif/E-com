@@ -26,12 +26,34 @@ export interface ApiEnvelope<T> {
   data: T;
 }
 
+export interface ActiveCategoryItem {
+  _id: string;
+  name: string;
+}
+
+let activeCategoriesCache: ActiveCategoryItem[] = [];
+
 export const categoryApi = {
   list: async (): Promise<CategoryItem[]> => {
     const res = await apiRequest<ApiEnvelope<CategoryItem[]> | CategoryItem[]>("/categories");
     if (Array.isArray(res)) return res;
     return res.data ?? [];
   },
+
+  listActive: async (): Promise<ActiveCategoryItem[]> => {
+    try {
+      const res = await apiRequest<ApiEnvelope<ActiveCategoryItem[]> | ActiveCategoryItem[]>(
+        "/categories/active",
+      );
+      const items = Array.isArray(res) ? res : res.data ?? [];
+      activeCategoriesCache = items;
+      return items;
+    } catch {
+      return activeCategoriesCache;
+    }
+  },
+
+  getCachedActive: (): ActiveCategoryItem[] => activeCategoriesCache,
 
   create: async (payload: CreateCategoryPayload, accessToken?: string): Promise<CategoryItem> => {
     const headers: Record<string, string> = {};

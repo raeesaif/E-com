@@ -3,16 +3,33 @@ export type StockStatus = "In Stock" | "Low Stock" | "Out of Stock";
 export type OrderStatus = "Pending" | "Confirmed" | "Processing" | "Shipped" | "Delivered";
 export type PaymentStatus = "Paid" | "Pending" | "Failed";
 
+export interface ProductSellerDetails {
+  _id?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  storeName?: string;
+}
+
 export interface Product {
   id: string;
+  _id?: string;
+  productId?: string;
   name: string;
   seller: string;
+  storeName?: string;
+  sellerDetails?: ProductSellerDetails;
   category: string;
+  categoryId?: string;
   description: string;
   price: number;
   discount: number;
   stock: number;
-  imagePosition: string;
+  imagePosition?: string;
+  productImage?: string;
+  productImagePublicId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 export interface Order {
   id: string;
@@ -34,8 +51,16 @@ export const categories = ["Electronics", "Fashion", "Home", "Travel", "Lifestyl
 export const products: Product[] = [
   {
     id: "p1",
+    productId: "PRD-1001",
     name: "Studio ANC Headphones",
     seller: "North & Pine",
+    storeName: "North & Pine",
+    sellerDetails: {
+      firstName: "Oliver",
+      lastName: "North",
+      email: "hello@northpine.co",
+      storeName: "North & Pine",
+    },
     category: "Electronics",
     description:
       "Immersive over-ear headphones with active noise cancellation, soft-touch controls, and a 40-hour battery.",
@@ -46,8 +71,16 @@ export const products: Product[] = [
   },
   {
     id: "p2",
+    productId: "PRD-1002",
     name: "Pace Knit Runners",
     seller: "Motion House",
+    storeName: "Motion House",
+    sellerDetails: {
+      firstName: "Elena",
+      lastName: "Rostova",
+      email: "team@motion.house",
+      storeName: "Motion House",
+    },
     category: "Fashion",
     description:
       "Lightweight everyday trainers with breathable knit uppers and responsive cushioned soles.",
@@ -58,8 +91,16 @@ export const products: Product[] = [
   },
   {
     id: "p3",
+    productId: "PRD-1003",
     name: "Luna Ceramic Lamp",
     seller: "Atelier Home",
+    storeName: "Atelier Home",
+    sellerDetails: {
+      firstName: "Sophie",
+      lastName: "Laurent",
+      email: "care@atelierhome.co",
+      storeName: "Atelier Home",
+    },
     category: "Home",
     description:
       "Hand-finished ceramic table lamp with a textured linen shade and warm ambient light.",
@@ -70,8 +111,16 @@ export const products: Product[] = [
   },
   {
     id: "p4",
+    productId: "PRD-1004",
     name: "Transit Daypack",
     seller: "Roam Supply",
+    storeName: "Roam Supply",
+    sellerDetails: {
+      firstName: "Liam",
+      lastName: "Vance",
+      email: "ops@roamsupply.co",
+      storeName: "Roam Supply",
+    },
     category: "Travel",
     description:
       "Weather-resistant commuter backpack with a padded laptop sleeve and considered internal organization.",
@@ -82,8 +131,16 @@ export const products: Product[] = [
   },
   {
     id: "p5",
+    productId: "PRD-1005",
     name: "Arc Steel Bottle",
     seller: "Field Goods",
+    storeName: "Field Goods",
+    sellerDetails: {
+      firstName: "Maya",
+      lastName: "Lin",
+      email: "support@fieldgoods.co",
+      storeName: "Field Goods",
+    },
     category: "Lifestyle",
     description:
       "Double-wall stainless bottle that keeps drinks cold for 24 hours with a leakproof cap.",
@@ -94,8 +151,16 @@ export const products: Product[] = [
   },
   {
     id: "p6",
+    productId: "PRD-1006",
     name: "Key 68 Mechanical",
     seller: "North & Pine",
+    storeName: "North & Pine",
+    sellerDetails: {
+      firstName: "Oliver",
+      lastName: "North",
+      email: "hello@northpine.co",
+      storeName: "North & Pine",
+    },
     category: "Electronics",
     description:
       "Compact wireless mechanical keyboard with tactile switches and multi-device connectivity.",

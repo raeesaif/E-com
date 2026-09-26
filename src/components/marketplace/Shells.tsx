@@ -186,6 +186,7 @@ const adminNav: NavItem[] = [
   { label: "Products", to: "/admin/products", icon: Boxes },
   { label: "Categories", to: "/admin/categories", icon: Tags },
   { label: "Orders", to: "/admin/orders", icon: ListOrdered },
+  { label: "Profile", to: "/admin/profile", icon: CircleUserRound },
 ];
 
 export function DashboardShell({
@@ -243,11 +244,11 @@ export function DashboardShell({
             <span className="grid size-9 place-items-center rounded-md bg-primary text-primary-foreground">
               {role === "admin" ? <BarChart3 /> : <Store />}
             </span>
-            <div>
-              <p className="text-sm font-bold">
-                {role === "admin"
-                  ? "Admin Console"
-                  : `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim()}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold truncate">
+                {`${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() ||
+                  user?.name ||
+                  (role === "admin" ? "Admin" : "Seller")}
               </p>
               <p className="text-xs text-muted-foreground capitalize">{role} workspace</p>
             </div>
@@ -307,21 +308,19 @@ export function AdminRoute({ children }: { children: ReactNode }) {
   return <ProtectedRoute allowed={["admin"]}>{children}</ProtectedRoute>;
 }
 function AccessGate({ role = "customer" }: { role?: Role }) {
-  const { setRole } = useAppState();
+  const roleName = role === "admin" ? "Admin" : role === "seller" ? "Seller" : "Customer";
+
   return (
     <div className="grid min-h-screen place-items-center bg-surface px-4">
       <div className="panel max-w-md p-8 text-center">
         <span className="mx-auto grid size-12 place-items-center rounded-md bg-secondary text-secondary-foreground">
           <UserRound />
         </span>
-        <h1 className="mt-5 text-2xl font-extrabold">Preview the {role} experience</h1>
+        <h1 className="mt-5 text-2xl font-extrabold">{roleName} sign in required</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          This is a frontend-only access gate. Choose the role to open its protected interface.
+          Please sign in to your {role} account to access this protected area.
         </p>
-        <Button className="mt-6 w-full" onClick={() => setRole(role)}>
-          Continue as {role}
-        </Button>
-        <Button asChild variant="ghost" className="mt-2 w-full">
+        <Button asChild className="mt-6 w-full">
           <Link to="/login">Go to sign in</Link>
         </Button>
       </div>

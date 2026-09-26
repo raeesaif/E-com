@@ -34,9 +34,22 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   return response.json() as Promise<T>;
 }
 
-export async function apiFormRequest<T>(path: string, data: FormData): Promise<T> {
+export async function apiFormRequest<T>(
+  path: string,
+  data: FormData,
+  options: { headers?: Record<string, string>; method?: string } = {},
+): Promise<T> {
   if (!API_URL) throw new Error("Connect VITE_API_URL to upload product media.");
-  const response = await fetch(`${API_URL}${path}`, { method: "POST", body: data });
-  if (!response.ok) throw new Error(`Upload failed (${response.status})`);
+  const response = await fetch(`${API_URL}${path}`, {
+    method: options.method ?? "POST",
+    headers: options.headers,
+    body: data,
+  });
+  if (!response.ok) {
+    throw new ApiError(
+      await readErrorMessage(response, `Request failed (${response.status})`),
+      response.status,
+    );
+  }
   return response.json() as Promise<T>;
 }

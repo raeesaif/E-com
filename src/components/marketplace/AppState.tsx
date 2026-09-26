@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import type { CartLine, Product, Role } from "@/lib/marketplace";
 import { products as seedProducts } from "@/lib/marketplace";
 import { authApi, type AuthUser } from "@/api/auth.api";
+import { categoryApi } from "@/api/category.api";
+import { productApi, mapBackendProductToProduct } from "@/api/product.api";
 import { ApiError } from "@/api/client";
 import { AppState, type AppStateValue } from "./useAppState";
 
@@ -121,6 +123,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setProducts((items) => items.filter((item) => item.id !== id));
   }, []);
 
+  const refreshProducts = useCallback(async () => {
+    try {
+      await categoryApi.listActive().catch(() => []);
+      const items = await productApi.list();
+      if (Array.isArray(items) && items.length > 0) {
+        setProducts(items.map(mapBackendProductToProduct));
+      }
+    } catch {
+      // Offline fallback: keep seed products
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshProducts();
+  }, [refreshProducts]);
+
   const value = useMemo<AppStateValue>(
     () => ({
       role,
@@ -133,6 +151,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       signOut,
       cart,
       products,
+      refreshProducts,
       addToCart,
       updateQuantity,
       removeFromCart,
@@ -150,6 +169,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       signOut,
       cart,
       products,
+      refreshProducts,
       addToCart,
       updateQuantity,
       removeFromCart,

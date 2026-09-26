@@ -9,6 +9,9 @@ export interface AuthUser {
   storeName?: string;
   description?: string;
   isVerified: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  __v?: number;
 }
 
 interface ApiEnvelope<T> {
