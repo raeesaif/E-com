@@ -4,14 +4,20 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  Clock,
+  Heart,
   LoaderCircle,
   Minus,
   Moon,
+  Package,
   PackageOpen,
   Plus,
   Search,
   ShoppingBag,
+  ShoppingCart,
+  Sparkles,
   Sun,
+  User,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
@@ -58,7 +64,7 @@ export function Brand({ compact = false }: { compact?: boolean }) {
         <ShoppingBag className="size-5" />
       </span>
       {!compact && (
-        <span className="font-display text-lg font-extrabold tracking-tight">Marketly</span>
+        <span className="font-display text-lg font-extrabold tracking-tight">E-Com</span>
       )}
     </Link>
   );
@@ -142,7 +148,9 @@ export function SearchInput({
 }
 
 export function ProductCard({ product }: { product: Product }) {
-  const { addToCart } = useAppState();
+  const { addToCart, isInWishlist, toggleWishlist } = useAppState();
+  const wishlisted = isInWishlist(product.id);
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 14 }}
@@ -159,6 +167,24 @@ export function ProductCard({ product }: { product: Product }) {
         />
         <div className="absolute left-3 top-3 flex gap-2">
           <DiscountBadge discount={product.discount} />
+        </div>
+        <div className="absolute right-3 top-3 z-10">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleWishlist(product.id);
+            }}
+            aria-label={wishlisted ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`}
+            title={wishlisted ? "Remove from wishlist" : "Save to wishlist"}
+            className={cn(
+              "grid size-8 place-items-center rounded-full bg-background/90 backdrop-blur-md shadow-xs transition-transform duration-200 hover:scale-110",
+              wishlisted ? "text-destructive" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Heart className={cn("size-4 transition-colors", wishlisted && "fill-current text-destructive")} />
+          </button>
         </div>
       </div>
       <div className="flex flex-1 flex-col p-4">
@@ -353,17 +379,25 @@ export function EmptyState({
   title,
   description,
   action,
+  icon,
 }: {
   title: string;
   description: string;
   action?: ReactNode;
+  icon?: ReactNode;
 }) {
   return (
     <div className="panel grid min-h-72 place-items-center p-8 text-center">
       <div>
-        <PackageOpen className="mx-auto size-9 text-muted-foreground" />
+        {icon ? (
+          <div className="mx-auto grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
+            {icon}
+          </div>
+        ) : (
+          <PackageOpen className="mx-auto size-9 text-muted-foreground" />
+        )}
         <h2 className="mt-4 font-display text-lg font-bold">{title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">{description}</p>
         {action && <div className="mt-5">{action}</div>}
       </div>
     </div>
@@ -418,3 +452,98 @@ export function BackLink({ to, label }: { to: "/shop" | "/orders"; label: string
     </Link>
   );
 }
+
+export function CustomerNavStrip({
+  current,
+}: {
+  current?: "shop" | "orders" | "wishlist" | "profile" | "cart";
+}) {
+  const { cart, role } = useAppState();
+
+  const navItems = [
+    { id: "shop", label: "Shop", to: "/shop" as const, icon: ShoppingBag },
+    ...(role === "customer"
+      ? [
+          { id: "orders", label: "My Orders", to: "/orders" as const, icon: Package },
+          { id: "cart", label: "Cart", to: "/cart" as const, count: cart.length, icon: ShoppingCart },
+          { id: "profile", label: "My Account", to: "/profile" as const, icon: User },
+        ]
+      : [
+          { id: "cart", label: "Cart", to: "/cart" as const, count: cart.length, icon: ShoppingCart },
+        ]),
+  ];
+
+  return (
+    <div className="mb-8 flex items-center gap-1.5 overflow-x-auto pb-1 border-b hide-scrollbar">
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        const active = current === item.id;
+        return (
+          <Link
+            key={item.id}
+            to={item.to}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition-all shrink-0",
+              active
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <Icon className="size-4" />
+            <span>{item.label}</span>
+            {typeof item.count === "number" && item.count > 0 && (
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.2 text-[11px] font-bold",
+                  active
+                    ? "bg-primary-foreground text-primary"
+                    : "bg-muted text-foreground border",
+                )}
+              >
+                {item.count}
+              </span>
+            )}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+export function RecentlyViewedStrip({
+  title = "Recently Viewed Products",
+}: {
+  title?: string;
+}) {
+  const { recentlyViewed, products } = useAppState();
+  const viewedProducts = recentlyViewed
+    .map((id) => products.find((p) => p.id === id))
+    .filter((p): p is Product => Boolean(p));
+
+  if (viewedProducts.length === 0) return null;
+
+  return (
+    <section className="mt-14 border-t pt-10">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
+            <Clock className="size-3.5" />
+            <span>Your Browsing History</span>
+          </div>
+          <h2 className="mt-1 font-display text-xl font-bold tracking-tight">{title}</h2>
+        </div>
+        <Button asChild variant="ghost" size="sm">
+          <Link to="/shop">
+            Explore catalog <ChevronRight className="size-4 ml-1" />
+          </Link>
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {viewedProducts.slice(0, 4).map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+    </section>
+  );
+}
+

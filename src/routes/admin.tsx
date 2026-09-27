@@ -3,12 +3,12 @@ import { AdminRoute, DashboardShell } from "@/components/marketplace/Shells";
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Admin Dashboard — Marketly" },
+      { title: "Admin Dashboard — E-Com" },
       {
         name: "description",
         content: "Monitor marketplace sellers, customers, products, and orders.",
       },
-      { property: "og:title", content: "Admin Dashboard — Marketly" },
+      { property: "og:title", content: "Admin Dashboard — E-Com" },
       {
         property: "og:description",
         content: "Monitor marketplace sellers, customers, products, and orders.",

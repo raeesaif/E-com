@@ -4,6 +4,7 @@ import {
   Boxes,
   ChevronDown,
   CircleUserRound,
+  Heart,
   LayoutDashboard,
   ListOrdered,
   Loader2,
@@ -28,11 +29,23 @@ import { useAppState } from "./useAppState";
 import type { Role } from "@/lib/marketplace";
 import { cn } from "@/lib/utils";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+
 export function Navbar() {
-  const { cart, role, signOut } = useAppState();
+  const { cart, wishlist, orders, role, user, signOut } = useAppState();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const roleLabel = role ? `${role.charAt(0).toUpperCase()}${role.slice(1)} panel` : "";
+  const customerName = `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || "Ariana Wells";
+
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
       <div className="page-shell flex h-16 items-center gap-4">
@@ -50,15 +63,45 @@ export function Navbar() {
           <Button asChild variant="ghost">
             <Link to="/contact">Contact</Link>
           </Button>
-          <Button asChild variant="ghost">
-            <Link to="/orders">My orders</Link>
-          </Button>
+          {role === "customer" && (
+            <Button asChild variant="ghost">
+              <Link to="/orders">My orders</Link>
+            </Button>
+          )}
         </nav>
         <div className="ml-auto flex items-center gap-1">
           <ThemeToggle />
-          <Button asChild variant="ghost" size="icon" className="relative" aria-label="Cart">
+
+          {/* Wishlist Link Button */}
+          {role === "customer" && (
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="relative"
+              aria-label="Wishlist"
+              title="Saved wishlist"
+            >
+              <Link to="/profile">
+                <Heart className="size-5" />
+                {wishlist.length > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                    className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground"
+                  >
+                    {wishlist.length}
+                  </motion.span>
+                )}
+              </Link>
+            </Button>
+          )}
+
+          {/* Cart Link Button */}
+          <Button asChild variant="ghost" size="icon" className="relative" aria-label="Cart" title="Shopping Cart">
             <Link to="/cart">
-              <ShoppingBag />
+              <ShoppingBag className="size-5" />
               {cart.length > 0 && (
                 <motion.span
                   initial={{ scale: 0 }}
@@ -71,12 +114,68 @@ export function Navbar() {
               )}
             </Link>
           </Button>
-          {role ? (
+
+          {/* Account Controls */}
+          {role === "customer" ? (
+            <div className="hidden items-center gap-2 sm:flex">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2 font-semibold">
+                    <div className="grid size-6 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                      {user?.firstName?.[0] || "A"}
+                    </div>
+                    <span className="max-w-28 truncate">{user?.firstName || "Account"}</span>
+                    <ChevronDown className="size-3.5 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-bold leading-none">{customerName}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email || "ariana@example.com"}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link to="/profile" className="flex items-center gap-2">
+                      <UserRound className="size-4" /> My Account & Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link to="/orders" className="flex items-center gap-2">
+                      <Package className="size-4" /> Order History ({orders.length})
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link to="/profile" className="flex items-center gap-2">
+                      <Heart className="size-4 text-destructive" /> Wishlist ({wishlist.length})
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link to="/cart" className="flex items-center gap-2">
+                      <ShoppingBag className="size-4" /> Shopping Cart ({cart.length})
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                    onClick={() => {
+                      signOut();
+                      navigate({ to: "/shop" });
+                      toast.info("Signed out of your account.");
+                    }}
+                  >
+                    <LogOut className="size-4 mr-2" /> Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : role ? (
             <div className="hidden items-center gap-2 sm:flex">
               <Button asChild variant="outline">
-                <Link to={role === "admin" ? "/admin" : role === "seller" ? "/seller" : "/profile"}>
-                  {role === "customer" ? "My account" : roleLabel}
-                </Link>
+                <Link to={role === "admin" ? "/admin" : "/seller"}>{roleLabel}</Link>
               </Button>
               <Button
                 variant="ghost"
@@ -97,6 +196,8 @@ export function Navbar() {
               </Link>
             </Button>
           )}
+
+          {/* Mobile menu hamburger */}
           <Button
             variant="ghost"
             size="icon"
@@ -108,6 +209,8 @@ export function Navbar() {
           </Button>
         </div>
       </div>
+
+      {/* Mobile navigation drawer */}
       <AnimatePresence>
         {open && (
           <motion.nav
@@ -131,40 +234,86 @@ export function Navbar() {
               className="justify-start"
               onClick={() => setOpen(false)}
             >
-              <Link to="/shop">Shop</Link>
+              <Link to="/shop">Shop Marketplace</Link>
             </Button>
+            {role === "customer" && (
+              <>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={() => setOpen(false)}
+                >
+                  <Link to="/orders">My Orders</Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={() => setOpen(false)}
+                >
+                  <Link to="/profile">
+                    Wishlist ({wishlist.length})
+                  </Link>
+                </Button>
+              </>
+            )}
             <Button
               asChild
               variant="ghost"
               className="justify-start"
               onClick={() => setOpen(false)}
             >
-              <Link to="/about">About</Link>
+              <Link to="/cart">Cart ({cart.length})</Link>
             </Button>
-            <Button
-              asChild
-              variant="ghost"
-              className="justify-start"
-              onClick={() => setOpen(false)}
-            >
-              <Link to="/contact">Contact</Link>
-            </Button>
-            <Button
-              asChild
-              variant="ghost"
-              className="justify-start"
-              onClick={() => setOpen(false)}
-            >
-              <Link to="/orders">My orders</Link>
-            </Button>
-            <Button
-              asChild
-              variant="ghost"
-              className="justify-start"
-              onClick={() => setOpen(false)}
-            >
-              <Link to="/login">Sign in</Link>
-            </Button>
+
+            {role ? (
+              <>
+                <div className="my-1 border-t" />
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="justify-start font-bold"
+                  onClick={() => setOpen(false)}
+                >
+                  <Link to={role === "admin" ? "/admin" : role === "seller" ? "/seller" : "/profile"}>
+                    {role === "customer" ? `My Account (${customerName})` : roleLabel}
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="justify-start text-destructive"
+                  onClick={() => {
+                    signOut();
+                    setOpen(false);
+                    navigate({ to: "/shop" });
+                    toast.info("Signed out of your account.");
+                  }}
+                >
+                  <LogOut className="size-4 mr-2" /> Sign out
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="my-1 border-t" />
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="justify-start font-semibold text-primary"
+                  onClick={() => setOpen(false)}
+                >
+                  <Link to="/login">Sign in</Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={() => setOpen(false)}
+                >
+                  <Link to="/register">Create an account</Link>
+                </Button>
+              </>
+            )}
           </motion.nav>
         )}
       </AnimatePresence>
@@ -320,9 +469,14 @@ function AccessGate({ role = "customer" }: { role?: Role }) {
         <p className="mt-2 text-sm text-muted-foreground">
           Please sign in to your {role} account to access this protected area.
         </p>
-        <Button asChild className="mt-6 w-full">
-          <Link to="/login">Go to sign in</Link>
-        </Button>
+        <div className="mt-6 flex flex-col gap-2.5">
+          <Button asChild className="w-full font-semibold">
+            <Link to="/login">Sign in with email</Link>
+          </Button>
+          <Button asChild variant="ghost" className="w-full text-xs text-muted-foreground">
+            <Link to="/shop">Explore marketplace as guest</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );

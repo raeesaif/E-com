@@ -14,12 +14,12 @@ function OrderDetailsRouteComponent() {
 export const Route = createFileRoute("/orders/$id")({
   head: () => ({
     meta: [
-      { title: "Order details — Marketly" },
+      { title: "Order details — E-Com" },
       {
         name: "description",
         content: "View order products, shipping, payment, and delivery progress.",
       },
-      { property: "og:title", content: "Order details — Marketly" },
+      { property: "og:title", content: "Order details — E-Com" },
       {
         property: "og:description",
         content: "View order products, shipping, payment, and delivery progress.",

@@ -3,12 +3,12 @@ import { SellerProductsPage } from "@/components/marketplace/DashboardPages";
 export const Route = createFileRoute("/seller/products")({
   head: () => ({
     meta: [
-      { title: "My Products — Marketly Seller" },
+      { title: "My Products — E-Com Seller" },
       {
         name: "description",
         content: "Manage your product catalog, prices, discounts, and stock.",
       },
-      { property: "og:title", content: "My Products — Marketly Seller" },
+      { property: "og:title", content: "My Products — E-Com Seller" },
       {
         property: "og:description",
         content: "Manage your product catalog, prices, discounts, and stock.",

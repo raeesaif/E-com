@@ -11,10 +11,10 @@ export const Route = createFileRoute("/reset-password")({
   validateSearch: resetPasswordSearchSchema,
   head: () => ({
     meta: [
-      { title: "Reset password — Marketly" },
+      { title: "Reset password — E-Com" },
       {
         name: "description",
-        content: "Choose a new password for your Marketly marketplace account.",
+        content: "Choose a new password for your E-Com marketplace account.",
       },
     ],
   }),

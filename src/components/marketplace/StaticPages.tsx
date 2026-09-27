@@ -32,25 +32,33 @@ import { PageHeader } from "./Common";
 export function AboutPage() {
   const pillars = [
     {
-      icon: <Sparkles className="size-6 text-primary" />,
+      icon: (
+        <Sparkles className="size-6 text-primary transition-colors duration-300 group-hover:text-white" />
+      ),
       title: "Thoughtfully Curated",
       description:
-        "We reject mindless mass production. Every product on Marketly is hand-selected for craftsmanship, utility, and enduring beauty.",
+        "We reject mindless mass production. Every product on E-Com is hand-selected for craftsmanship, utility, and enduring beauty.",
     },
     {
-      icon: <Users className="size-6 text-primary" />,
+      icon: (
+        <Users className="size-6 text-primary transition-colors duration-300 group-hover:text-white" />
+      ),
       title: "Direct From Makers",
       description:
         "By shortening the bridge between independent artisans and discerning customers, we empower creators to thrive on fair terms.",
     },
     {
-      icon: <ShieldCheck className="size-6 text-primary" />,
+      icon: (
+        <ShieldCheck className="size-6 text-primary transition-colors duration-300 group-hover:text-white" />
+      ),
       title: "Uncompromising Integrity",
       description:
         "Transparent pricing, authentic reviews, and 30-day buyer protection ensure you can shop with absolute confidence.",
     },
     {
-      icon: <HeartHandshake className="size-6 text-primary" />,
+      icon: (
+        <HeartHandshake className="size-6 text-primary transition-colors duration-300 group-hover:text-white" />
+      ),
       title: "Conscious Delivery",
       description:
         "All seller orders are packed with minimal plastics and carbon-offset shipping partners to minimize our environmental footprint.",
@@ -85,7 +93,7 @@ export function AboutPage() {
                 Elevating everyday living with goods that matter.
               </h1>
               <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
-                Marketly was founded on a simple conviction: the objects we invite into our homes,
+                E-Com was founded on a simple conviction: the objects we invite into our homes,
                 workspaces, and journeys should be crafted with intention, designed to last, and
                 support the real people who build them.
               </p>
@@ -122,7 +130,7 @@ export function AboutPage() {
           <div className="page-shell">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="font-display text-3xl font-extrabold sm:text-4xl">
-                What sets Marketly apart
+                What sets E-Com apart
               </h2>
               <p className="mt-3 text-base text-muted-foreground">
                 Our standards are uncompromising. Here is how we ensure each interaction feels
@@ -141,7 +149,7 @@ export function AboutPage() {
                   whileHover={{ y: -4 }}
                   className="panel group relative p-6 transition-all duration-300 hover:shadow-lg hover:border-primary/40"
                 >
-                  <div className="grid size-12 place-items-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                  <div className="grid size-12 place-items-center rounded-xl bg-primary/10 transition-all duration-300 group-hover:bg-primary group-hover:text-white group-hover:shadow-md group-hover:shadow-primary/20">
                     {pillar.icon}
                   </div>
                   <h3 className="mt-5 font-display text-lg font-bold">{pillar.title}</h3>
@@ -231,10 +239,10 @@ export function ContactPage() {
     {
       icon: <Mail className="size-5 text-primary" />,
       title: "Concierge Email",
-      line1: "support@marketly.store",
-      line2: "press@marketly.store",
+      line1: "support@e-com.store",
+      line2: "press@e-com.store",
       action: "Send Email",
-      href: "mailto:support@marketly.store",
+      href: "mailto:support@e-com.store",
     },
     {
       icon: <Phone className="size-5 text-primary" />,
@@ -260,11 +268,11 @@ export function ContactPage() {
       a: "Items are dispatched directly from our verified independent makers. Most orders ship within 1-2 business days with full real-time tracking.",
     },
     {
-      q: "What is Marketly's return policy?",
+      q: "What is E-Com's return policy?",
       a: "We offer a 30-day money-back guarantee on all products in their original condition. Return shipping is hassle-free through your order dashboard.",
     },
     {
-      q: "How can I apply to sell on Marketly?",
+      q: "How can I apply to sell on E-Com?",
       a: "Artisans and brands can sign up via our Seller Registration portal. Our curation committee reviews brand applications within 48 hours.",
     },
   ];
@@ -278,7 +286,7 @@ export function ContactPage() {
           <PageHeader
             eyebrow="Help & Concierge"
             title="We're here to help."
-            description="Have a question about an order, an artisan, or interested in joining Marketly as a brand? Send us a note or reach out through any of our channels below."
+            description="Have a question about an order, an artisan, or interested in joining E-Com as a brand? Send us a note or reach out through any of our channels below."
           />
 
           {/* Quick Contact Cards */}
@@ -476,22 +484,22 @@ export function TermsPage() {
     {
       title: "1. Acceptance of Terms",
       content:
-        "By accessing, browsing, or utilizing the Marketly marketplace platform (the 'Platform'), you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions. If you do not accept these terms, you must refrain from using the platform.",
+        "By accessing, browsing, or utilizing the E-Com marketplace platform (the 'Platform'), you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions. If you do not accept these terms, you must refrain from using the platform.",
     },
     {
-      title: "2. The Marketly Marketplace Model",
+      title: "2. The E-Com Marketplace Model",
       content:
-        "Marketly operates as a curated multi-vendor marketplace platform. Products displayed on the site are produced, listed, and fulfilled by independent sellers. Marketly facilitates transactions, payment clearing, and order monitoring, but the contract of sale is established between buyer and independent seller.",
+        "E-Com operates as a curated multi-vendor marketplace platform. Products displayed on the site are produced, listed, and fulfilled by independent sellers. E-Com facilitates transactions, payment clearing, and order monitoring, but the contract of sale is established between buyer and independent seller.",
     },
     {
       title: "3. Account Creation & Security",
       content:
-        "Users are responsible for safeguarding their login credentials and account access tokens. Any unauthorized account activity must be reported to support@marketly.store immediately. Marketly reserves the right to suspend or terminate accounts that breach community trust.",
+        "Users are responsible for safeguarding their login credentials and account access tokens. Any unauthorized account activity must be reported to support@e-com.store immediately. E-Com reserves the right to suspend or terminate accounts that breach community trust.",
     },
     {
       title: "4. Pricing, Taxes & Payment Processing",
       content:
-        "All product prices are quoted in USD and include any relevant discounts calculated in real time. Payments are processed securely using PCI-DSS compliant payment gateways. Buyers authorize Marketly to charge the designated payment method for all orders placed.",
+        "All product prices are quoted in USD and include any relevant discounts calculated in real time. Payments are processed securely using PCI-DSS compliant payment gateways. Buyers authorize E-Com to charge the designated payment method for all orders placed.",
     },
     {
       title: "5. Shipping, Delivery & Inspection",
@@ -501,22 +509,22 @@ export function TermsPage() {
     {
       title: "6. Seller Obligations & Standards",
       content:
-        "Independent sellers must maintain accurate inventory counts, honor promotional discounts, and deliver original, non-counterfeit items. Marketly maintains absolute discretion to delist goods or terminate seller stores that violate our curation guidelines.",
+        "Independent sellers must maintain accurate inventory counts, honor promotional discounts, and deliver original, non-counterfeit items. E-Com maintains absolute discretion to delist goods or terminate seller stores that violate our curation guidelines.",
     },
     {
       title: "7. Intellectual Property & Brand Assets",
       content:
-        "All visual branding, typography, illustrations, UI components, and software code constituting Marketly are the exclusive intellectual property of Marketly Inc. Product photography and trademarks remain the property of their respective creators.",
+        "All visual branding, typography, illustrations, UI components, and software code constituting E-Com are the exclusive intellectual property of E-Com Inc. Product photography and trademarks remain the property of their respective creators.",
     },
     {
       title: "8. Limitation of Liability",
       content:
-        "In no event shall Marketly Inc., its officers, or affiliates be liable for indirect, incidental, punitive, or consequential damages resulting from platform use, delayed courier delivery, or product defects beyond the replacement or refund value of the purchased goods.",
+        "In no event shall E-Com Inc., its officers, or affiliates be liable for indirect, incidental, punitive, or consequential damages resulting from platform use, delayed courier delivery, or product defects beyond the replacement or refund value of the purchased goods.",
     },
     {
       title: "9. Modifications & Inquiries",
       content:
-        "We may update these terms periodically to reflect operational, legal, or regulatory modifications. Continued usage constitutes acceptance. For inquiries regarding these terms, contact legal@marketly.store.",
+        "We may update these terms periodically to reflect operational, legal, or regulatory modifications. Continued usage constitutes acceptance. For inquiries regarding these terms, contact legal@e-com.store.",
     },
   ];
 
@@ -593,7 +601,7 @@ export function PrivacyPage() {
     {
       title: "3. Cookie Preferences & Local Storage",
       items: [
-        "Marketly utilizes client-side LocalStorage exclusively for active authentication tokens, theme preferences (light/dark mode), and shopping cart caching.",
+        "E-Com utilizes client-side LocalStorage exclusively for active authentication tokens, theme preferences (light/dark mode), and shopping cart caching.",
         "We do not sell user behavioral data to third-party ad networks or data brokers.",
       ],
     },
@@ -610,13 +618,13 @@ export function PrivacyPage() {
       items: [
         "Right to Access: You may request a complete export of your personal information at any time.",
         "Right to Rectification: You can update your account name and email directly via the Profile settings.",
-        "Right to Erasure ('Right to be Forgotten'): You can request permanent deletion of your account and personal data by emailing privacy@marketly.store.",
+        "Right to Erasure ('Right to be Forgotten'): You can request permanent deletion of your account and personal data by emailing privacy@e-com.store.",
       ],
     },
     {
       title: "6. Security Architecture",
       items: [
-        "Marketly enforces modern security controls including HTTPS-only communication, CSRF middleware protection, and granular role-based access tokens.",
+        "E-Com enforces modern security controls including HTTPS-only communication, CSRF middleware protection, and granular role-based access tokens.",
       ],
     },
   ];

@@ -9,12 +9,12 @@ function ProductDetailsRouteComponent() {
 export const Route = createFileRoute("/products/$id")({
   head: () => ({
     meta: [
-      { title: "Product details — Marketly" },
+      { title: "Product details — E-Com" },
       {
         name: "description",
         content: "View product details, pricing, availability, and seller information.",
       },
-      { property: "og:title", content: "Product details — Marketly" },
+      { property: "og:title", content: "Product details — E-Com" },
       {
         property: "og:description",
         content: "View product details, pricing, availability, and seller information.",

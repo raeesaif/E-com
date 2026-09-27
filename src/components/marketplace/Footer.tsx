@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Brand } from "./Common";
 import { categories } from "@/lib/marketplace";
+import { useAppState } from "./useAppState";
 
 // Sleek X (Twitter) SVG Icon
 function XIcon({ className }: { className?: string }) {
@@ -36,6 +37,7 @@ function XIcon({ className }: { className?: string }) {
 }
 
 export function Footer() {
+  const { role } = useAppState();
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -50,7 +52,7 @@ export function Footer() {
     setTimeout(() => {
       setLoading(false);
       setSubscribed(true);
-      toast.success("Welcome to Marketly! You're now on our insider list.", {
+      toast.success("Welcome to E-Com! You're now on our insider list.", {
         description: "Enjoy exclusive drops, artisan spotlights, and early access.",
       });
       setEmail("");
@@ -135,14 +137,14 @@ export function Footer() {
           <div className="lg:col-span-4">
             <Brand />
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
-              Marketly is a curated online marketplace connecting conscious everyday shoppers with
+              E-Com is a curated online marketplace connecting conscious everyday shoppers with
               exceptional, trusted independent creators, designers, and artisans worldwide.
             </p>
 
             {/* Newsletter Subscription */}
             <div className="mt-6 max-w-sm">
               <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                Join the Marketly Dispatch
+                Join the E-Com Dispatch
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 First access to artisan drops, seasonal collections & maker stories.
@@ -197,7 +199,7 @@ export function Footer() {
                     href={social.href}
                     target="_blank"
                     rel="noreferrer"
-                    aria-label={`Visit Marketly on ${social.name}`}
+                    aria-label={`Visit E-Com on ${social.name}`}
                     whileHover={{ scale: 1.1, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                     transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -235,17 +237,6 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
-              <li>
-                <Link
-                  to="/shop"
-                  className="inline-flex items-center gap-1.5 font-medium text-accent hover:underline underline-offset-4"
-                >
-                  <span>Special Offers</span>
-                  <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] font-bold">
-                    Sale
-                  </span>
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -292,7 +283,7 @@ export function Footer() {
                   to="/register"
                   className="text-muted-foreground transition-colors hover:text-primary hover:underline underline-offset-4"
                 >
-                  Sell on Marketly
+                  Sell on E-Com
                 </Link>
               </li>
               <li>
@@ -312,28 +303,41 @@ export function Footer() {
               Customer Care
             </h2>
             <ul className="mt-4 space-y-2.5 text-sm">
-              <li>
-                <Link
-                  to="/orders"
-                  className="text-muted-foreground transition-colors hover:text-primary hover:underline underline-offset-4"
-                >
-                  Track My Orders
-                </Link>
-              </li>
+              {role === "customer" ? (
+                <>
+                  <li>
+                    <Link
+                      to="/orders"
+                      className="text-muted-foreground transition-colors hover:text-primary hover:underline underline-offset-4"
+                    >
+                      Track My Orders
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/profile"
+                      className="text-muted-foreground transition-colors hover:text-primary hover:underline underline-offset-4"
+                    >
+                      My Account
+                    </Link>
+                  </li>
+                </>
+              ) : (
+                <li>
+                  <Link
+                    to="/login"
+                    className="text-muted-foreground transition-colors hover:text-primary hover:underline underline-offset-4"
+                  >
+                    Sign In
+                  </Link>
+                </li>
+              )}
               <li>
                 <Link
                   to="/cart"
                   className="text-muted-foreground transition-colors hover:text-primary hover:underline underline-offset-4"
                 >
                   Shopping Bag
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/profile"
-                  className="text-muted-foreground transition-colors hover:text-primary hover:underline underline-offset-4"
-                >
-                  My Account
                 </Link>
               </li>
               <li>
@@ -372,10 +376,10 @@ export function Footer() {
               <div className="flex items-center gap-2.5">
                 <Mail className="size-4 shrink-0 text-primary" />
                 <a
-                  href="mailto:support@marketly.store"
+                  href="mailto:support@e-com.store"
                   className="hover:text-primary hover:underline underline-offset-4"
                 >
-                  support@marketly.store
+                  support@e-com.store
                 </a>
               </div>
               <div className="flex items-center gap-2.5">
@@ -392,15 +396,6 @@ export function Footer() {
                 <span>Mon – Fri: 9am – 6pm EST</span>
               </div>
             </div>
-
-            {/* Quick Status Pill */}
-            <div className="mt-5 inline-flex items-center gap-2 rounded-full border bg-surface px-3 py-1 text-[11px] font-medium text-foreground">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-success" />
-              </span>
-              <span>All Systems Operational</span>
-            </div>
           </div>
         </div>
       </div>
@@ -409,7 +404,7 @@ export function Footer() {
       <div className="border-t bg-muted/30 py-6 text-xs text-muted-foreground">
         <div className="page-shell flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <p>© {new Date().getFullYear()} Marketly Inc. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} E-Com Inc. All rights reserved.</p>
             <div className="flex items-center gap-4">
               <Link to="/terms" className="hover:text-foreground hover:underline">
                 Terms of Service

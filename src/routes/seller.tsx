@@ -3,12 +3,12 @@ import { DashboardShell, SellerRoute } from "@/components/marketplace/Shells";
 export const Route = createFileRoute("/seller")({
   head: () => ({
     meta: [
-      { title: "Seller Dashboard — Marketly" },
-      { name: "description", content: "Manage your Marketly storefront, products, and orders." },
-      { property: "og:title", content: "Seller Dashboard — Marketly" },
+      { title: "Seller Dashboard — E-Com" },
+      { name: "description", content: "Manage your E-Com storefront, products, and orders." },
+      { property: "og:title", content: "Seller Dashboard — E-Com" },
       {
         property: "og:description",
-        content: "Manage your Marketly storefront, products, and orders.",
+        content: "Manage your E-Com storefront, products, and orders.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -4,8 +4,8 @@ import { ForgotPasswordPage } from "@/components/marketplace/ForgotPasswordPage"
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
     meta: [
-      { title: "Forgot password — Marketly" },
-      { name: "description", content: "Reset your Marketly marketplace account password." },
+      { title: "Forgot password — E-Com" },
+      { name: "description", content: "Reset your E-Com marketplace account password." },
     ],
   }),
   component: () => <ForgotPasswordPage />,

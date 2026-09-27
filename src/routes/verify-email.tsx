@@ -10,8 +10,8 @@ export const Route = createFileRoute("/verify-email")({
   validateSearch: verifyEmailSearchSchema,
   head: () => ({
     meta: [
-      { title: "Verify email — Marketly" },
-      { name: "description", content: "Verify your Marketly marketplace account email." },
+      { title: "Verify email — E-Com" },
+      { name: "description", content: "Verify your E-Com marketplace account email." },
     ],
   }),
   component: RouteComponent,

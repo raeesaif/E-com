@@ -31,6 +31,28 @@ export interface Product {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface OrderItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  seller: string;
+}
+
+export interface CustomerAddress {
+  id: string;
+  label: string;
+  isDefault: boolean;
+  name: string;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  phone: string;
+}
+
 export interface Order {
   id: string;
   customer: string;
@@ -41,6 +63,15 @@ export interface Order {
   payment: PaymentStatus;
   status: OrderStatus;
   date: string;
+  items?: OrderItem[];
+  shippingAddress?: {
+    name: string;
+    street: string;
+    city: string;
+    state?: string;
+    zip?: string;
+    phone?: string;
+  };
 }
 export interface CartLine {
   productId: string;
@@ -181,10 +212,27 @@ export const orders: Order[] = [
     payment: "Paid",
     status: "Shipped",
     date: "Sep 18, 2026",
+    items: [
+      {
+        productId: "p1",
+        name: "Studio ANC Headphones",
+        price: 151.2,
+        quantity: 1,
+        seller: "North & Pine",
+      },
+    ],
+    shippingAddress: {
+      name: "Ariana Wells",
+      street: "128 Market Street, Apt 4B",
+      city: "San Francisco",
+      state: "CA",
+      zip: "94105",
+      phone: "+1 (555) 012-3489",
+    },
   },
   {
     id: "ORD-1047",
-    customer: "Marcus Chen",
+    customer: "Ariana Wells",
     seller: "Motion House",
     product: "Pace Knit Runners",
     quantity: 2,
@@ -192,10 +240,27 @@ export const orders: Order[] = [
     payment: "Paid",
     status: "Processing",
     date: "Sep 17, 2026",
+    items: [
+      {
+        productId: "p2",
+        name: "Pace Knit Runners",
+        price: 105.4,
+        quantity: 2,
+        seller: "Motion House",
+      },
+    ],
+    shippingAddress: {
+      name: "Ariana Wells",
+      street: "128 Market Street, Apt 4B",
+      city: "San Francisco",
+      state: "CA",
+      zip: "94105",
+      phone: "+1 (555) 012-3489",
+    },
   },
   {
     id: "ORD-1046",
-    customer: "Nora Patel",
+    customer: "Ariana Wells",
     seller: "Atelier Home",
     product: "Luna Ceramic Lamp",
     quantity: 1,
@@ -203,10 +268,27 @@ export const orders: Order[] = [
     payment: "Pending",
     status: "Confirmed",
     date: "Sep 17, 2026",
+    items: [
+      {
+        productId: "p3",
+        name: "Luna Ceramic Lamp",
+        price: 98,
+        quantity: 1,
+        seller: "Atelier Home",
+      },
+    ],
+    shippingAddress: {
+      name: "Ariana Wells",
+      street: "742 Montgomery St, Suite 300",
+      city: "San Francisco",
+      state: "CA",
+      zip: "94111",
+      phone: "+1 (555) 987-6543",
+    },
   },
   {
     id: "ORD-1045",
-    customer: "Ethan Brooks",
+    customer: "Ariana Wells",
     seller: "Roam Supply",
     product: "Transit Daypack",
     quantity: 1,
@@ -214,6 +296,50 @@ export const orders: Order[] = [
     payment: "Paid",
     status: "Delivered",
     date: "Sep 15, 2026",
+    items: [
+      {
+        productId: "p4",
+        name: "Transit Daypack",
+        price: 127.8,
+        quantity: 1,
+        seller: "Roam Supply",
+      },
+    ],
+    shippingAddress: {
+      name: "Ariana Wells",
+      street: "128 Market Street, Apt 4B",
+      city: "San Francisco",
+      state: "CA",
+      zip: "94105",
+      phone: "+1 (555) 012-3489",
+    },
+  },
+];
+
+export const seedAddresses: CustomerAddress[] = [
+  {
+    id: "addr-1",
+    label: "Home",
+    isDefault: true,
+    name: "Ariana Wells",
+    street: "128 Market Street, Apt 4B",
+    city: "San Francisco",
+    state: "CA",
+    zip: "94105",
+    country: "United States",
+    phone: "+1 (555) 012-3489",
+  },
+  {
+    id: "addr-2",
+    label: "Design Studio / Office",
+    isDefault: false,
+    name: "Ariana Wells",
+    street: "742 Montgomery St, Suite 300",
+    city: "San Francisco",
+    state: "CA",
+    zip: "94111",
+    country: "United States",
+    phone: "+1 (555) 987-6543",
   },
 ];
 export const sellers = [

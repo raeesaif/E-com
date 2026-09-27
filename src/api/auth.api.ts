@@ -6,6 +6,8 @@ export interface AuthUser {
   lastName: string;
   email: string;
   role: "customer" | "seller" | "admin";
+  phone?: string;
+  shippingAddress?: string;
   storeName?: string;
   description?: string;
   isVerified: boolean;
@@ -13,6 +15,40 @@ export interface AuthUser {
   updatedAt?: string;
   __v?: number;
 }
+
+export const DEMO_CUSTOMER: AuthUser = {
+  _id: "usr-demo-customer",
+  firstName: "Ariana",
+  lastName: "Wells",
+  email: "ariana@example.com",
+  phone: "+1 (555) 012-3489",
+  shippingAddress: "128 Market Street, San Francisco, CA 94105",
+  role: "customer",
+  isVerified: true,
+  createdAt: "2026-05-14T10:00:00.000Z",
+};
+
+export const DEMO_SELLER: AuthUser = {
+  _id: "usr-demo-seller",
+  firstName: "Oliver",
+  lastName: "North",
+  email: "hello@northpine.co",
+  storeName: "North & Pine",
+  description: "Handcrafted everyday audio and studio gear.",
+  role: "seller",
+  isVerified: true,
+  createdAt: "2026-03-12T10:00:00.000Z",
+};
+
+export const DEMO_ADMIN: AuthUser = {
+  _id: "usr-demo-admin",
+  firstName: "E-Com",
+  lastName: "Admin",
+  email: "admin@e-com.co",
+  role: "admin",
+  isVerified: true,
+  createdAt: "2026-01-01T10:00:00.000Z",
+};
 
 interface ApiEnvelope<T> {
   success: boolean;

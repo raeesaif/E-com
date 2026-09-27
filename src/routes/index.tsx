@@ -3,9 +3,9 @@ import { HomePage } from "@/components/marketplace/StorePages";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Marketly — Curated Marketplace" },
+      { title: "E-Com — Curated Marketplace" },
       { name: "description", content: "Shop curated products from trusted independent sellers." },
-      { property: "og:title", content: "Marketly — Curated Marketplace" },
+      { property: "og:title", content: "E-Com — Curated Marketplace" },
       {
         property: "og:description",
         content: "Shop curated products from trusted independent sellers.",

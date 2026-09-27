@@ -4,10 +4,10 @@ import { ProtectedRoute } from "@/components/marketplace/Shells";
 export const Route = createFileRoute("/orders")({
   head: () => ({
     meta: [
-      { title: "My Orders — Marketly" },
-      { name: "description", content: "Track your Marketly purchases and delivery status." },
-      { property: "og:title", content: "My Orders — Marketly" },
-      { property: "og:description", content: "Track your Marketly purchases and delivery status." },
+      { title: "My Orders — E-Com" },
+      { name: "description", content: "Track your E-Com purchases and delivery status." },
+      { property: "og:title", content: "My Orders — E-Com" },
+      { property: "og:description", content: "Track your E-Com purchases and delivery status." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
