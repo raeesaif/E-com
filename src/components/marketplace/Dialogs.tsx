@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { categoryApi, type CategoryItem, type ActiveCategoryItem } from "@/api/category.api";
-import { productApi, mapBackendProductToProduct } from "@/api/product.api";
+import { productApi, mapBackendProductToProduct, type UpdateProductPayload } from "@/api/product.api";
 import { useAppState } from "./useAppState";
 import {
   Dialog,
@@ -342,32 +342,60 @@ export function ProductDialog({
     }
 
     // Editing existing product
-    if (product._id && accessToken && (role === "seller" || user?.role === "seller")) {
+    const targetProductId = product._id || product.id;
+    if (targetProductId && accessToken && (role === "seller" || user?.role === "seller")) {
       try {
         setIsSaving(true);
+        const categoryId =
+          draft.categoryId ||
+          activeCategories.find((c) => c.name === draft.category)?._id ||
+          product.categoryId;
+
+        const updatePayload: UpdateProductPayload = {
+          name: draft.name.trim(),
+          description: draft.description.trim(),
+          price: Number(draft.price),
+          discount: Number(draft.discount || 0),
+          stock: Number(draft.stock || 0),
+        };
+
+        if (categoryId) {
+          updatePayload.category = categoryId;
+        }
+
+        const imgUrl =
+          (!previewUrl?.startsWith("blob:") ? previewUrl : null) ||
+          (!draft.productImage?.startsWith("blob:") ? draft.productImage : null) ||
+          (!product.productImage?.startsWith("blob:") ? product.productImage : null);
+
+        if (imgUrl && !imgUrl.startsWith("blob:") && !imgUrl.startsWith("data:")) {
+          updatePayload.productImage = imgUrl;
+        }
+
         const updated = await productApi.update(
-          product._id,
-          {
-            name: draft.name.trim(),
-            description: draft.description.trim(),
-            price: Number(draft.price),
-            discount: Number(draft.discount || 0),
-            stock: Number(draft.stock || 0),
-            productImage: selectedFile ?? undefined,
-          },
+          targetProductId,
+          updatePayload,
           accessToken,
         );
         toast.success("Product updated successfully");
         onSave(mapBackendProductToProduct(updated));
         if (refreshProducts) await refreshProducts();
         setOpen(false);
-      } catch {
-        // Backend note §4: PATCH is not wired on router level yet (returns 404)
-        onSave(draft);
-        toast.info(
-          "Backend route PATCH /products/:id is not wired yet; updated in local catalog preview.",
-        );
-        setOpen(false);
+      } catch (err: unknown) {
+        if (err instanceof ApiError && err.status === 404) {
+          // Backend note §4: fallback if PATCH is not wired at all on the router
+          onSave(draft);
+          toast.info(
+            "Backend route PATCH /products/:id is not wired yet; updated in local catalog preview.",
+          );
+          setOpen(false);
+        } else {
+          const msg =
+            err instanceof ApiError
+              ? err.message
+              : (err as Error)?.message || "Failed to update product";
+          toast.error(msg);
+        }
       } finally {
         setIsSaving(false);
       }

@@ -36,6 +36,16 @@ export interface CreateProductPayload {
   productImage: File | Blob; // the actual File object
 }
 
+export interface UpdateProductPayload {
+  name?: string;
+  description?: string;
+  category?: string;
+  price?: number;
+  discount?: number;
+  stock?: number;
+  productImage?: string;
+}
+
 export interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -45,13 +55,14 @@ export interface ApiEnvelope<T> {
 export function mapBackendProductToProduct(bp: BackendProduct): Product {
   const sellerObj = typeof bp.seller === "object" && bp.seller !== null ? bp.seller : null;
   const storeName =
-    sellerObj?.storeName ||
+    sellerObj?.storeName?.trim() ||
     (typeof bp.seller === "string" ? bp.seller : "") ||
     "Store";
   const sellerFullName = sellerObj
     ? `${sellerObj.firstName || ""} ${sellerObj.lastName || ""}`.trim()
     : "";
-  const sellerDisplayName = sellerFullName || storeName || "Seller";
+  // Prioritize storeName so customer views display storeName instead of seller's personal name
+  const sellerDisplayName = storeName || sellerFullName || "Store";
 
   const sellerDetails = sellerObj
     ? {
@@ -138,28 +149,45 @@ export const productApi = {
 
   update: async (
     id: string,
-    payload: Partial<Omit<CreateProductPayload, "productImage">> & {
-      productImage?: File | Blob | string;
-    },
+    payload: UpdateProductPayload,
     accessToken: string,
   ): Promise<BackendProduct> => {
-    const form = new FormData();
-    if (payload.name) form.append("name", payload.name.trim());
-    if (payload.description) form.append("description", payload.description.trim());
-    if (payload.category) form.append("category", payload.category);
-    if (payload.price !== undefined) form.append("price", String(payload.price));
-    if (payload.discount !== undefined) form.append("discount", String(payload.discount));
-    if (payload.stock !== undefined) form.append("stock", String(payload.stock));
-    if (payload.productImage) form.append("productImage", payload.productImage);
+    const body: Record<string, unknown> = {};
+    if (payload.name !== undefined && payload.name.trim() !== "") {
+      body.name = payload.name.trim();
+    }
+    if (payload.description !== undefined && payload.description.trim() !== "") {
+      body.description = payload.description.trim();
+    }
+    if (payload.category !== undefined && payload.category.trim() !== "") {
+      body.category = payload.category.trim();
+    }
+    if (payload.price !== undefined && !isNaN(Number(payload.price))) {
+      body.price = Number(payload.price);
+    }
+    if (payload.discount !== undefined && !isNaN(Number(payload.discount))) {
+      body.discount = Number(payload.discount);
+    }
+    if (payload.stock !== undefined && !isNaN(Number(payload.stock))) {
+      body.stock = Number(payload.stock);
+    }
+    if (
+      payload.productImage !== undefined &&
+      typeof payload.productImage === "string" &&
+      payload.productImage.trim() !== ""
+    ) {
+      body.productImage = payload.productImage.trim();
+    }
 
-    const res = await apiFormRequest<ApiEnvelope<BackendProduct> | BackendProduct>(
+    const res = await apiRequest<ApiEnvelope<BackendProduct> | BackendProduct>(
       `/products/${id}`,
-      form,
       {
         method: "PATCH",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
+        body: JSON.stringify(body),
       },
     );
     return "data" in res && res.data ? res.data : (res as BackendProduct);

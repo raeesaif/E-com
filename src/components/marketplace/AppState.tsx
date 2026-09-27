@@ -265,7 +265,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           name: product.name,
           price: finalPrice(product),
           quantity: line.quantity,
-          seller: product.seller,
+          seller: product.storeName || product.seller,
         };
       });
 

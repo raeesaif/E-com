@@ -152,7 +152,7 @@ export function HomePage() {
               </Button>
             }
           />
-          <ProductGrid products={featured} />
+          <ProductGrid products={featured} className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
         </section>
         <section className="border-y bg-surface">
           <div className="page-shell py-16">
@@ -161,7 +161,7 @@ export function HomePage() {
               title="Worth a closer look"
               description="Selected products with considered prices while stock lasts."
             />
-            <ProductGrid products={discounted} />
+            <ProductGrid products={discounted} className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
           </div>
         </section>
       </main>
@@ -333,7 +333,7 @@ export function ProductDetailsPage({ id }: { id: string }) {
             <p className="mt-5 text-sm font-bold text-primary">{product.category}</p>
             <h1 className="mt-2 text-3xl font-extrabold md:text-4xl">{product.name}</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Sold by <span className="font-semibold text-foreground">{product.seller}</span>
+              Sold by <span className="font-semibold text-foreground">{product.storeName || product.seller}</span>
             </p>
             <p className="mt-6 leading-7 text-muted-foreground">{product.description}</p>
             <div className="mt-6">
@@ -498,7 +498,7 @@ export function CartPage() {
                 <ProductImage product={line.product} className="aspect-square rounded-md" />
                 <div>
                   <h2 className="font-display font-bold">{line.product.name}</h2>
-                  <p className="text-xs text-muted-foreground">{line.product.seller}</p>
+                  <p className="text-xs text-muted-foreground">{line.product.storeName || line.product.seller}</p>
                   <div className="mt-2">
                     <ProductPrice product={line.product} />
                   </div>
@@ -698,7 +698,7 @@ export function CheckoutPage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold">{p.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {p.seller} · Qty {line.quantity}
+                        {p.storeName || p.seller} · Qty {line.quantity}
                       </p>
                       <p className="mt-1 text-sm font-semibold">{money(finalPrice(p) * line.quantity)}</p>
                     </div>

@@ -93,7 +93,7 @@ export function StockBadge({ stock }: { stock: number }) {
   return (
     <Badge
       className={cn(
-        "shadow-none",
+        "shadow-none shrink-0 whitespace-nowrap",
         status === "In Stock" && "border-success bg-success text-success-foreground",
         status === "Low Stock" && "border-warning bg-warning text-warning-foreground",
         status === "Out of Stock" && "border-destructive/20 bg-destructive/10 text-destructive",
@@ -188,13 +188,18 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
       </div>
       <div className="flex flex-1 flex-col p-4">
-        <div className="mb-2 flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-primary">{product.category}</p>
-            <h3 className="mt-1 truncate font-display font-bold">{product.name}</h3>
-            <p className="mt-1 text-xs text-muted-foreground">by {product.seller}</p>
+        <div className="mb-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-primary truncate">{product.category}</p>
+            <StockBadge stock={product.stock} />
           </div>
-          <StockBadge stock={product.stock} />
+          <h3
+            className="mt-1.5 font-display text-base font-bold text-foreground leading-snug line-clamp-2"
+            title={product.name}
+          >
+            {product.name}
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">by {product.storeName || product.seller}</p>
         </div>
         <div className="mt-auto pt-4">
           <ProductPrice product={product} />
@@ -220,9 +225,20 @@ export function ProductCard({ product }: { product: Product }) {
   );
 }
 
-export function ProductGrid({ products }: { products: Product[] }) {
+export function ProductGrid({
+  products,
+  className,
+}: {
+  products: Product[];
+  className?: string;
+}) {
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div
+      className={cn(
+        "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3",
+        className,
+      )}
+    >
       {products.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}
