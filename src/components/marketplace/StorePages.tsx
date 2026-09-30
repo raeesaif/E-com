@@ -51,11 +51,13 @@ import { Navbar } from "./Shells";
 import { Footer } from "./Footer";
 import { Badge } from "@/components/ui/badge";
 import { productApi, mapBackendProductToProduct } from "@/api/product.api";
+import { categoryApi, type ActiveCategoryItem } from "@/api/category.api";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 export interface HomePageFilterParams {
   category?: string;
+  categoryId?: string;
 }
 
 /**
@@ -70,23 +72,56 @@ export function filterHomeProducts(
   if (!filters.category || filters.category === "All") {
     return products;
   }
-  return products.filter((p) => p.category === filters.category);
+  return products.filter((p) => {
+    if (filters.categoryId && p.categoryId && p.categoryId === filters.categoryId) {
+      return true;
+    }
+    if (p.categoryId && p.categoryId === filters.category) {
+      return true;
+    }
+    return p.category.toLowerCase() === filters.category.toLowerCase();
+  });
 }
 
 export function HomePage() {
-  const { products } = useAppState();
+  const { products, categories: appCategories } = useAppState();
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
+  const [categoriesList, setCategoriesList] = useState<ActiveCategoryItem[]>(() => {
+    const cached = categoryApi.getCachedActive();
+    return cached.length > 0 ? cached : (appCategories || []);
+  });
 
-  // Dynamic category options derived from live API products + default categories
-  const dynamicCategories = useMemo(() => {
-    const catsFromProducts = products.map((p) => p.category).filter(Boolean);
-    return Array.from(new Set(["All", ...catsFromProducts, ...categories]));
-  }, [products]);
+  useEffect(() => {
+    if (appCategories && appCategories.length > 0) {
+      setCategoriesList(appCategories);
+      return;
+    }
+    categoryApi.listActive().then((items) => {
+      if (Array.isArray(items) && items.length > 0) {
+        setCategoriesList(items);
+      }
+    });
+  }, [appCategories]);
+
+  // Take only 6 categories from the Category API as requested
+  const visibleCategories = useMemo(() => {
+    if (categoriesList && categoriesList.length > 0) {
+      return categoriesList.slice(0, 6);
+    }
+    return categories.slice(0, 6).map((name, i) => ({
+      _id: `seed-cat-${i}`,
+      name,
+    }));
+  }, [categoriesList]);
 
   // Frontend filtering logic applied directly on the Home page
   const filteredProducts = useMemo(() => {
-    return filterHomeProducts(products, { category: selectedCategory });
-  }, [products, selectedCategory]);
+    return filterHomeProducts(products, {
+      category: selectedCategory,
+      categoryId: selectedCategoryId,
+    });
+  }, [products, selectedCategory, selectedCategoryId]);
 
   // Hero preview products from live API (fallback to seed if initial load is pending)
   const heroProducts = useMemo(() => {
@@ -177,23 +212,42 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* Dynamic Category Filter Bar (works on Home page without redirect) */}
+        {/* Category Filter Bar from Category API (only 6 categories shown + All products) */}
         <section className="page-shell py-10">
           <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-            {dynamicCategories.map((category) => {
-              const isActive = selectedCategory === category;
+            <Button
+              type="button"
+              variant={selectedCategory === "All" ? "default" : "outline"}
+              onClick={() => {
+                setSelectedCategory("All");
+                setSelectedCategoryId(undefined);
+              }}
+              className={cn(
+                "whitespace-nowrap transition-colors",
+                selectedCategory === "All" && "shadow-xs font-bold",
+              )}
+            >
+              All products
+            </Button>
+            {visibleCategories.map((category) => {
+              const isActive =
+                selectedCategory === category.name ||
+                (selectedCategoryId !== undefined && selectedCategoryId === category._id);
               return (
                 <Button
-                  key={category}
+                  key={category._id}
                   type="button"
                   variant={isActive ? "default" : "outline"}
-                  onClick={() => setSelectedCategory(category)}
+                  onClick={() => {
+                    setSelectedCategory(category.name);
+                    setSelectedCategoryId(category._id);
+                  }}
                   className={cn(
                     "whitespace-nowrap transition-colors",
                     isActive && "shadow-xs font-bold",
                   )}
                 >
-                  {category === "All" ? "All products" : category}
+                  {category.name}
                 </Button>
               );
             })}
@@ -1067,8 +1121,7 @@ export function OrdersPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              addToCart(order.items?.[0]?.productId ?? "p1", 1, { silent: true });
-                              toast.success("Added to cart! Ready for checkout.");
+                              addToCart(order.items?.[0]?.productId ?? "p1", 1);
                             }}
                           >
                             Buy again
@@ -1114,8 +1167,7 @@ export function OrderPage({ id }: { id: string }) {
               <Button
                 size="sm"
                 onClick={() => {
-                  addToCart(order.items?.[0]?.productId ?? sampleProduct.id, 1, { silent: true });
-                  toast.success("Added to cart! Ready for checkout.");
+                  addToCart(order.items?.[0]?.productId ?? sampleProduct.id, 1);
                 }}
               >
                 Buy again

@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 import type { CartLine, CustomerAddress, Order, Product, Role } from "@/lib/marketplace";
 import type { AuthUser } from "@/api/auth.api";
+import type { ActiveCategoryItem } from "@/api/category.api";
 
 export interface AppStateValue {
   role: Role | null;
@@ -28,6 +29,8 @@ export interface AppStateValue {
   saveProduct: (product: Product) => void;
   deleteProduct: (id: string) => void;
   refreshProducts: () => Promise<void>;
+  categories: ActiveCategoryItem[];
+  refreshCategories: () => Promise<void>;
   // Customer Experience
   wishlist: string[];
   toggleWishlist: (id: string) => void;

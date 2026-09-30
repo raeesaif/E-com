@@ -8,7 +8,7 @@ import {
 } from "@/lib/marketplace";
 import { authApi, type AuthUser, DEMO_CUSTOMER } from "@/api/auth.api";
 import { cartApi, mapBackendCartToCartLines } from "@/api/cart.api";
-import { categoryApi } from "@/api/category.api";
+import { categoryApi, type ActiveCategoryItem } from "@/api/category.api";
 import { productApi, mapBackendProductToProduct } from "@/api/product.api";
 import { ApiError } from "@/api/client";
 import { toast } from "sonner";
@@ -229,21 +229,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         ),
       );
 
-      // Optimistic update of local cart
-      setCart((lines) => {
-        const next = lines.some((line) => matchIds.has(line.productId))
-          ? lines.map((line) =>
-              matchIds.has(line.productId)
-                ? { ...line, quantity: line.quantity + quantity }
-                : line,
-            )
-          : [...lines, { productId: id, quantity }];
-        window.localStorage.setItem("market-cart", JSON.stringify(next));
-        return next;
-      });
-
-      if (!options.silent) {
-        toast.success("Added to cart");
+      // Verify whether that product already exists in the user's cart
+      const alreadyInCart = cart.some((line) => matchIds.has(line.productId));
+      if (alreadyInCart) {
+        if (!options.silent) {
+          toast.info("Product is already in the cart.");
+        }
+        return null;
       }
 
       try {
@@ -255,19 +247,32 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           const mapped = mapBackendCartToCartLines(res);
           setCart(mapped);
           window.localStorage.setItem("market-cart", JSON.stringify(mapped));
+        } else {
+          setCart((lines) => {
+            const next = [...lines, { productId: id, quantity }];
+            window.localStorage.setItem("market-cart", JSON.stringify(next));
+            return next;
+          });
+        }
+        if (!options.silent) {
+          toast.success("Product added to cart successfully.");
         }
         return res;
       } catch (error) {
         console.warn("[addToCart API response]", error);
         if (error instanceof ApiError) {
-          if (error.status === 400 || error.status === 403 || error.status === 404) {
+          if (error.message && error.message.toLowerCase().includes("already in the cart")) {
+            if (!options.silent) {
+              toast.info("Product is already in the cart.");
+            }
+          } else if (error.status === 400 || error.status === 403 || error.status === 404) {
             toast.error(error.message);
           }
         }
         return null;
       }
     },
-    [products, accessToken],
+    [products, accessToken, cart],
   );
 
   const updateQuantity = useCallback(
@@ -554,11 +559,29 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const openLoginModal = useCallback(() => setLoginModalOpen(true), []);
   const closeLoginModal = useCallback(() => setLoginModalOpen(false), []);
 
+  const [categories, setCategories] = useState<ActiveCategoryItem[]>(() =>
+    categoryApi.getCachedActive(),
+  );
+
+  const refreshCategories = useCallback(async () => {
+    try {
+      const cats = await categoryApi.listActive();
+      if (Array.isArray(cats) && cats.length > 0) {
+        setCategories(cats);
+      }
+    } catch {
+      // Offline fallback
+    }
+  }, []);
+
   const hasFetchedInitialProducts = useRef(false);
 
   const refreshProducts = useCallback(async (options: { forceRefresh?: boolean } = {}) => {
     try {
-      await categoryApi.listActive().catch(() => []);
+      const cats = await categoryApi.listActive().catch(() => []);
+      if (Array.isArray(cats) && cats.length > 0) {
+        setCategories(cats);
+      }
       const items = await productApi.list(options);
       if (Array.isArray(items) && items.length > 0) {
         setProducts(items.map(mapBackendProductToProduct));
@@ -591,6 +614,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       cart,
       products,
       refreshProducts,
+      categories,
+      refreshCategories,
       addToCart,
       updateQuantity,
       removeFromCart,
@@ -626,6 +651,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       cart,
       products,
       refreshProducts,
+      categories,
+      refreshCategories,
       addToCart,
       updateQuantity,
       removeFromCart,

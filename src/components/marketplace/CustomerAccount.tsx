@@ -218,10 +218,9 @@ export function CustomerAccount() {
     setNewAddrDefault(false);
   };
 
-  const handleBuyAgain = (productId?: string) => {
+  const handleBuyAgain = async (productId?: string) => {
     if (!productId) return;
-    addToCart(productId, 1, { silent: true });
-    toast.success("Added to cart! Ready for checkout.");
+    await addToCart(productId, 1);
   };
 
   const handleMoveAllToCart = () => {

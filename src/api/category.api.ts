@@ -32,30 +32,58 @@ export interface ActiveCategoryItem {
 }
 
 let activeCategoriesCache: ActiveCategoryItem[] = [];
+let activeCategoriesTimestamp = 0;
+let inFlightActivePromise: Promise<ActiveCategoryItem[]> | null = null;
+const CACHE_TTL_MS = 60 * 1000;
 
 export const categoryApi = {
+  invalidateCache: () => {
+    activeCategoriesCache = [];
+    activeCategoriesTimestamp = 0;
+  },
+
   list: async (): Promise<CategoryItem[]> => {
     const res = await apiRequest<ApiEnvelope<CategoryItem[]> | CategoryItem[]>("/categories");
     if (Array.isArray(res)) return res;
     return res.data ?? [];
   },
 
-  listActive: async (): Promise<ActiveCategoryItem[]> => {
-    try {
-      const res = await apiRequest<ApiEnvelope<ActiveCategoryItem[]> | ActiveCategoryItem[]>(
-        "/categories/active",
-      );
-      const items = Array.isArray(res) ? res : res.data ?? [];
-      activeCategoriesCache = items;
-      return items;
-    } catch {
+  listActive: async (options: { forceRefresh?: boolean } = {}): Promise<ActiveCategoryItem[]> => {
+    if (
+      !options.forceRefresh &&
+      activeCategoriesCache.length > 0 &&
+      Date.now() - activeCategoriesTimestamp < CACHE_TTL_MS
+    ) {
       return activeCategoriesCache;
     }
+
+    if (inFlightActivePromise) {
+      return inFlightActivePromise;
+    }
+
+    inFlightActivePromise = (async () => {
+      try {
+        const res = await apiRequest<ApiEnvelope<ActiveCategoryItem[]> | ActiveCategoryItem[]>(
+          "/categories/active",
+        );
+        const items = Array.isArray(res) ? res : res.data ?? [];
+        activeCategoriesCache = items;
+        activeCategoriesTimestamp = Date.now();
+        return items;
+      } catch {
+        return activeCategoriesCache;
+      } finally {
+        inFlightActivePromise = null;
+      }
+    })();
+
+    return inFlightActivePromise;
   },
 
   getCachedActive: (): ActiveCategoryItem[] => activeCategoriesCache,
 
   create: async (payload: CreateCategoryPayload, accessToken?: string): Promise<CategoryItem> => {
+    categoryApi.invalidateCache();
     const headers: Record<string, string> = {};
     if (accessToken) {
       headers["Authorization"] = `Bearer ${accessToken}`;
@@ -70,6 +98,7 @@ export const categoryApi = {
       headers,
       body: JSON.stringify(body),
     });
+    categoryApi.invalidateCache();
     return "data" in res && res.data ? res.data : (res as CategoryItem);
   },
 
@@ -78,6 +107,7 @@ export const categoryApi = {
     payload: UpdateCategoryPayload,
     accessToken?: string,
   ): Promise<CategoryItem> => {
+    categoryApi.invalidateCache();
     const headers: Record<string, string> = {};
     if (accessToken) {
       headers["Authorization"] = `Bearer ${accessToken}`;
@@ -92,10 +122,12 @@ export const categoryApi = {
       headers,
       body: JSON.stringify(body),
     });
+    categoryApi.invalidateCache();
     return "data" in res && res.data ? res.data : (res as CategoryItem);
   },
 
   remove: async (id: string, accessToken?: string): Promise<void> => {
+    categoryApi.invalidateCache();
     const headers: Record<string, string> = {};
     if (accessToken) {
       headers["Authorization"] = `Bearer ${accessToken}`;
@@ -104,5 +136,6 @@ export const categoryApi = {
       method: "DELETE",
       headers,
     });
+    categoryApi.invalidateCache();
   },
 };
