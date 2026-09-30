@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { CartLine, CustomerAddress, Order, Product, Role } from "@/lib/marketplace";
 import {
   finalPrice,
@@ -7,20 +7,20 @@ import {
   seedAddresses,
 } from "@/lib/marketplace";
 import { authApi, type AuthUser, DEMO_CUSTOMER } from "@/api/auth.api";
+import { cartApi, mapBackendCartToCartLines } from "@/api/cart.api";
 import { categoryApi } from "@/api/category.api";
 import { productApi, mapBackendProductToProduct } from "@/api/product.api";
 import { ApiError } from "@/api/client";
 import { toast } from "sonner";
 import { AppState, type AppStateValue } from "./useAppState";
+import { LoginRequiredDialog } from "./Dialogs";
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<Role | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [cart, setCart] = useState<CartLine[]>([
-    { productId: "p1", quantity: 1 },
-    { productId: "p3", quantity: 1 },
-  ]);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [cart, setCart] = useState<CartLine[]>([]);
   const [products, setProducts] = useState(seedProducts);
   const [hydrated, setHydrated] = useState(false);
 
@@ -112,15 +112,31 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 6. Cart
-    const storedCart = window.localStorage.getItem("market-cart");
-    if (storedCart) {
-      try {
-        const parsed = JSON.parse(storedCart);
-        if (Array.isArray(parsed)) setCart(parsed);
-      } catch {
-        // use fallback
-      }
+    // 6. Cart - only restore for logged-in user with token
+    if (storedToken) {
+      cartApi
+        .get(storedToken)
+        .then((backendCart) => {
+          if (backendCart && Array.isArray(backendCart.items)) {
+            const mapped = mapBackendCartToCartLines(backendCart);
+            setCart(mapped);
+            window.localStorage.setItem("market-cart", JSON.stringify(mapped));
+          }
+        })
+        .catch(() => {
+          const storedCart = window.localStorage.getItem("market-cart");
+          if (storedCart) {
+            try {
+              const parsed = JSON.parse(storedCart);
+              if (Array.isArray(parsed)) setCart(parsed);
+            } catch {
+              // ignore
+            }
+          }
+        });
+    } else {
+      setCart([]);
+      window.localStorage.removeItem("market-cart");
     }
 
     setHydrated(true);
@@ -140,6 +156,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       window.localStorage.setItem("market-access-token", tokens.accessToken);
       window.localStorage.setItem("market-refresh-token", tokens.refreshToken);
       setRole(nextUser.role);
+      if (nextUser.role === "customer") {
+        cartApi
+          .get(tokens.accessToken)
+          .then((backendCart) => {
+            if (backendCart && Array.isArray(backendCart.items)) {
+              const mapped = mapBackendCartToCartLines(backendCart);
+              setCart(mapped);
+              window.localStorage.setItem("market-cart", JSON.stringify(mapped));
+            }
+          })
+          .catch(() => undefined);
+      }
     },
     [setRole],
   );
@@ -161,43 +189,195 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (accessToken) authApi.logout(accessToken).catch(() => undefined);
     setUser(null);
     setAccessToken(null);
+    setCart([]);
     window.localStorage.removeItem("market-user");
     window.localStorage.removeItem("market-access-token");
     window.localStorage.removeItem("market-refresh-token");
+    window.localStorage.removeItem("market-cart");
     setRole(null);
   }, [accessToken, setRole]);
 
-  const addToCart = useCallback((id: string, quantity = 1) => {
-    setCart((lines) => {
-      const next = lines.some((line) => line.productId === id)
-        ? lines.map((line) =>
-            line.productId === id ? { ...line, quantity: line.quantity + quantity } : line,
-          )
-        : [...lines, { productId: id, quantity }];
-      window.localStorage.setItem("market-cart", JSON.stringify(next));
-      return next;
-    });
-    toast.success("Added to cart");
-  }, []);
+  const addToCart = useCallback(
+    async (
+      id: string,
+      quantity = 1,
+      options: { silent?: boolean } = {},
+    ) => {
+      const token =
+        accessToken ||
+        (typeof window !== "undefined"
+          ? window.localStorage.getItem("market-access-token") ||
+            window.localStorage.getItem("accessToken") ||
+            window.localStorage.getItem("token")
+          : null);
 
-  const updateQuantity = useCallback((id: string, quantity: number) => {
-    setCart((lines) => {
-      const next = lines.map((line) =>
-        line.productId === id ? { ...line, quantity: Math.max(1, quantity) } : line,
+      if (!token) {
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
+        }
+        setLoginModalOpen(true);
+        return null;
+      }
+
+      const targetProduct = products.find(
+        (p) => p.id === id || p._id === id || p.productId === id,
       );
-      window.localStorage.setItem("market-cart", JSON.stringify(next));
-      return next;
-    });
-  }, []);
+      const apiProductId = targetProduct?.productId || targetProduct?._id || id;
+      const matchIds = new Set(
+        [id, targetProduct?.id, targetProduct?._id, targetProduct?.productId].filter(
+          (val): val is string => Boolean(val),
+        ),
+      );
 
-  const removeFromCart = useCallback((id: string) => {
-    setCart((lines) => {
-      const next = lines.filter((line) => line.productId !== id);
-      window.localStorage.setItem("market-cart", JSON.stringify(next));
-      return next;
-    });
-    toast.info("Removed from cart");
-  }, []);
+      // Optimistic update of local cart
+      setCart((lines) => {
+        const next = lines.some((line) => matchIds.has(line.productId))
+          ? lines.map((line) =>
+              matchIds.has(line.productId)
+                ? { ...line, quantity: line.quantity + quantity }
+                : line,
+            )
+          : [...lines, { productId: id, quantity }];
+        window.localStorage.setItem("market-cart", JSON.stringify(next));
+        return next;
+      });
+
+      if (!options.silent) {
+        toast.success("Added to cart");
+      }
+
+      try {
+        const res = await cartApi.addToCart(
+          { productId: apiProductId, quantity },
+          token,
+        );
+        if (res && Array.isArray(res.items)) {
+          const mapped = mapBackendCartToCartLines(res);
+          setCart(mapped);
+          window.localStorage.setItem("market-cart", JSON.stringify(mapped));
+        }
+        return res;
+      } catch (error) {
+        console.warn("[addToCart API response]", error);
+        if (error instanceof ApiError) {
+          if (error.status === 400 || error.status === 403 || error.status === 404) {
+            toast.error(error.message);
+          }
+        }
+        return null;
+      }
+    },
+    [products, accessToken],
+  );
+
+  const updateQuantity = useCallback(
+    async (id: string, quantity: number) => {
+      const token =
+        accessToken ||
+        (typeof window !== "undefined"
+          ? window.localStorage.getItem("market-access-token") ||
+            window.localStorage.getItem("accessToken") ||
+            window.localStorage.getItem("token")
+          : null);
+
+      if (!token) {
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
+        }
+        setLoginModalOpen(true);
+        return;
+      }
+
+      const target = products.find(
+        (p) => p.id === id || p._id === id || p.productId === id,
+      );
+      const apiProductId = target?.productId || target?._id || id;
+      const matchIds = new Set(
+        [id, target?.id, target?._id, target?.productId].filter(
+          (val): val is string => Boolean(val),
+        ),
+      );
+
+      const desiredQuantity = Math.max(1, quantity);
+
+      setCart((lines) => {
+        const next = lines.map((line) =>
+          matchIds.has(line.productId)
+            ? { ...line, quantity: desiredQuantity }
+            : line,
+        );
+        window.localStorage.setItem("market-cart", JSON.stringify(next));
+        return next;
+      });
+
+      try {
+        const res = await cartApi.updateCartQuantity(apiProductId, desiredQuantity, token);
+        if (res && Array.isArray(res.items)) {
+          const mapped = mapBackendCartToCartLines(res);
+          setCart(mapped);
+          window.localStorage.setItem("market-cart", JSON.stringify(mapped));
+        }
+      } catch (error) {
+        console.warn("[updateQuantity API error]", error);
+        if (error instanceof ApiError) {
+          toast.error(error.message);
+        }
+      }
+    },
+    [products, accessToken],
+  );
+
+  const removeFromCart = useCallback(
+    async (id: string) => {
+      const token =
+        accessToken ||
+        (typeof window !== "undefined"
+          ? window.localStorage.getItem("market-access-token") ||
+            window.localStorage.getItem("accessToken") ||
+            window.localStorage.getItem("token")
+          : null);
+
+      if (!token) {
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
+        }
+        setLoginModalOpen(true);
+        return;
+      }
+
+      const target = products.find(
+        (p) => p.id === id || p._id === id || p.productId === id,
+      );
+      const apiProductId = target?.productId || target?._id || id;
+      const matchIds = new Set(
+        [id, target?.id, target?._id, target?.productId].filter(
+          (val): val is string => Boolean(val),
+        ),
+      );
+
+      setCart((lines) => {
+        const next = lines.filter((line) => !matchIds.has(line.productId));
+        window.localStorage.setItem("market-cart", JSON.stringify(next));
+        return next;
+      });
+      toast.info("Removed from cart");
+
+      try {
+        const res = await cartApi.removeFromCart(apiProductId, token);
+        if (res && Array.isArray(res.items)) {
+          const mapped = mapBackendCartToCartLines(res);
+          setCart(mapped);
+          window.localStorage.setItem("market-cart", JSON.stringify(mapped));
+        }
+      } catch (error) {
+        console.warn("[removeFromCart API error]", error);
+        if (error instanceof ApiError) {
+          toast.error(error.message);
+        }
+      }
+    },
+    [products, accessToken],
+  );
 
   const clearCart = useCallback(() => {
     setCart([]);
@@ -259,7 +439,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       };
     }) => {
       const orderItems = orderData.items.map((line) => {
-        const product = products.find((p) => p.id === line.productId) ?? seedProducts[0];
+        const product =
+          products.find(
+            (p) =>
+              p.id === line.productId ||
+              p._id === line.productId ||
+              p.productId === line.productId,
+          ) ?? seedProducts[0]!;
         return {
           productId: product.id,
           name: product.name,
@@ -333,7 +519,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setAddresses((prev) => {
       const filtered = prev.filter((a) => a.id !== id);
       if (filtered.length > 0 && !filtered.some((a) => a.isDefault)) {
-        filtered[0] = { ...filtered[0], isDefault: true };
+        const first = filtered[0];
+        if (first) {
+          filtered[0] = { ...first, isDefault: true };
+        }
       }
       window.localStorage.setItem("market-addresses", JSON.stringify(filtered));
       return filtered;
@@ -362,10 +551,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setProducts((items) => items.filter((item) => item.id !== id));
   }, []);
 
-  const refreshProducts = useCallback(async () => {
+  const openLoginModal = useCallback(() => setLoginModalOpen(true), []);
+  const closeLoginModal = useCallback(() => setLoginModalOpen(false), []);
+
+  const hasFetchedInitialProducts = useRef(false);
+
+  const refreshProducts = useCallback(async (options: { forceRefresh?: boolean } = {}) => {
     try {
       await categoryApi.listActive().catch(() => []);
-      const items = await productApi.list();
+      const items = await productApi.list(options);
       if (Array.isArray(items) && items.length > 0) {
         setProducts(items.map(mapBackendProductToProduct));
       }
@@ -375,6 +569,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (hasFetchedInitialProducts.current) return;
+    hasFetchedInitialProducts.current = true;
     refreshProducts();
   }, [refreshProducts]);
 
@@ -388,6 +584,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       signIn,
       updateUser,
       signOut,
+      loginModalOpen,
+      setLoginModalOpen,
+      openLoginModal,
+      closeLoginModal,
       cart,
       products,
       refreshProducts,
@@ -420,6 +620,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       signIn,
       updateUser,
       signOut,
+      loginModalOpen,
+      openLoginModal,
+      closeLoginModal,
       cart,
       products,
       refreshProducts,
@@ -445,5 +648,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  return <AppState.Provider value={value}>{children}</AppState.Provider>;
+  return (
+    <AppState.Provider value={value}>
+      {children}
+      <LoginRequiredDialog />
+    </AppState.Provider>
+  );
 }

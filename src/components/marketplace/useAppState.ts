@@ -11,8 +11,16 @@ export interface AppStateValue {
   signIn: (user: AuthUser, tokens: { accessToken: string; refreshToken: string }) => void;
   updateUser: (user: AuthUser) => void;
   signOut: () => void;
+  loginModalOpen: boolean;
+  setLoginModalOpen: (open: boolean) => void;
+  openLoginModal: () => void;
+  closeLoginModal: () => void;
   cart: CartLine[];
-  addToCart: (id: string, quantity?: number) => void;
+  addToCart: (
+    id: string,
+    quantity?: number,
+    options?: { silent?: boolean },
+  ) => Promise<unknown> | void;
   updateQuantity: (id: string, quantity: number) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;

@@ -142,10 +142,20 @@ function LoginForm() {
       const { data } = await authApi.login(values);
       signIn(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
       toast.success(`Welcome back, ${data.user.firstName || "Customer"}!`);
-      navigate({
-        to:
-          data.user.role === "seller" ? "/seller" : data.user.role === "admin" ? "/admin" : "/shop",
-      });
+
+      const redirectPath =
+        typeof window !== "undefined"
+          ? window.sessionStorage.getItem("redirectAfterLogin")
+          : null;
+      if (redirectPath) {
+        window.sessionStorage.removeItem("redirectAfterLogin");
+        navigate({ to: redirectPath as any });
+      } else {
+        navigate({
+          to:
+            data.user.role === "seller" ? "/seller" : data.user.role === "admin" ? "/admin" : "/shop",
+        });
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setUnverifiedEmail(values.email);
@@ -163,7 +173,16 @@ function LoginForm() {
           refreshToken: "offline-customer-refresh",
         });
         toast.success("Welcome, Ariana! Taking you straight to the marketplace.");
-        navigate({ to: "/shop" });
+        const redirectPath =
+          typeof window !== "undefined"
+            ? window.sessionStorage.getItem("redirectAfterLogin")
+            : null;
+        if (redirectPath) {
+          window.sessionStorage.removeItem("redirectAfterLogin");
+          navigate({ to: redirectPath as any });
+        } else {
+          navigate({ to: "/shop" });
+        }
         return;
       }
 

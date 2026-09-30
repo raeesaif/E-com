@@ -45,6 +45,7 @@ export function Navbar() {
   const navigate = useNavigate();
   const roleLabel = role ? `${role.charAt(0).toUpperCase()}${role.slice(1)} panel` : "";
   const customerName = `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || "Ariana Wells";
+  const cartCount = role === "customer" ? cart.reduce((sum, item) => sum + (item.quantity || 0), 0) : 0;
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
@@ -102,14 +103,14 @@ export function Navbar() {
           <Button asChild variant="ghost" size="icon" className="relative" aria-label="Cart" title="Shopping Cart">
             <Link to="/cart">
               <ShoppingBag className="size-5" />
-              {cart.length > 0 && (
+              {cartCount > 0 && (
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 500, damping: 25 }}
                   className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground"
                 >
-                  {cart.length}
+                  {cartCount}
                 </motion.span>
               )}
             </Link>
@@ -155,7 +156,7 @@ export function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="cursor-pointer">
                     <Link to="/cart" className="flex items-center gap-2">
-                      <ShoppingBag className="size-4" /> Shopping Cart ({cart.length})
+                      <ShoppingBag className="size-4" /> Shopping Cart {cartCount > 0 ? `(${cartCount})` : ""}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -264,7 +265,7 @@ export function Navbar() {
               className="justify-start"
               onClick={() => setOpen(false)}
             >
-              <Link to="/cart">Cart ({cart.length})</Link>
+              <Link to="/cart">Cart {cartCount > 0 ? `(${cartCount})` : ""}</Link>
             </Button>
 
             {role ? (

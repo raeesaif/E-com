@@ -205,14 +205,14 @@ export function ProductCard({ product }: { product: Product }) {
           <ProductPrice product={product} />
           <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
             <Button asChild variant="outline">
-              <Link to="/products/$id" params={{ id: product.id }}>
+              <Link to="/products/$id" params={{ id: product.productId || product.id }}>
                 View details
               </Link>
             </Button>
             <Button
               size="icon"
               disabled={!product.stock}
-              onClick={() => addToCart(product.id)}
+              onClick={() => addToCart(product.productId || product.id)}
               aria-label={`Add ${product.name} to cart`}
               title="Add to cart"
             >
@@ -475,17 +475,21 @@ export function CustomerNavStrip({
   current?: "shop" | "orders" | "wishlist" | "profile" | "cart";
 }) {
   const { cart, role } = useAppState();
+  const cartCount =
+    role === "customer"
+      ? cart.reduce((sum, item) => sum + (item.quantity || 0), 0)
+      : 0;
 
   const navItems = [
     { id: "shop", label: "Shop", to: "/shop" as const, icon: ShoppingBag },
     ...(role === "customer"
       ? [
           { id: "orders", label: "My Orders", to: "/orders" as const, icon: Package },
-          { id: "cart", label: "Cart", to: "/cart" as const, count: cart.length, icon: ShoppingCart },
+          { id: "cart", label: "Cart", to: "/cart" as const, count: cartCount, icon: ShoppingCart },
           { id: "profile", label: "My Account", to: "/profile" as const, icon: User },
         ]
       : [
-          { id: "cart", label: "Cart", to: "/cart" as const, count: cart.length, icon: ShoppingCart },
+          { id: "cart", label: "Cart", to: "/cart" as const, count: cartCount, icon: ShoppingCart },
         ]),
   ];
 

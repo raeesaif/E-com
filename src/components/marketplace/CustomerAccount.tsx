@@ -149,6 +149,8 @@ export function CustomerAccount() {
     .map((id) => products.find((p) => p.id === id))
     .filter((p): p is (typeof products)[0] => Boolean(p));
 
+  const cartCount = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
+
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSavingProfile(true);
@@ -218,14 +220,14 @@ export function CustomerAccount() {
 
   const handleBuyAgain = (productId?: string) => {
     if (!productId) return;
-    addToCart(productId, 1);
+    addToCart(productId, 1, { silent: true });
     toast.success("Added to cart! Ready for checkout.");
   };
 
   const handleMoveAllToCart = () => {
     if (wishlistProducts.length === 0) return;
     wishlistProducts.forEach((p) => {
-      if (p.stock > 0) addToCart(p.id, 1);
+      if (p.stock > 0) addToCart(p.id, 1, { silent: true });
     });
     clearWishlist();
     toast.success(`Moved ${wishlistProducts.length} item(s) to your cart!`);
@@ -326,7 +328,7 @@ export function CustomerAccount() {
               Cart Items
             </span>
             <span className="mt-1 font-display text-2xl font-black text-foreground">
-              {cart.length}
+              {cartCount}
             </span>
             <span className="mt-1 text-[11px] text-primary font-medium flex items-center gap-1">
               Go to checkout <ArrowRight className="size-3" />
@@ -448,7 +450,7 @@ export function CustomerAccount() {
                   className="flex items-center justify-between rounded-lg border bg-surface/60 p-3 text-sm font-semibold transition-colors hover:bg-surface"
                 >
                   <span className="flex items-center gap-2.5">
-                    <ShoppingCart className="size-4 text-primary" /> Review Shopping Cart ({cart.length} items)
+                    <ShoppingCart className="size-4 text-primary" /> Review Shopping Cart ({cartCount} {cartCount === 1 ? "item" : "items"})
                   </span>
                   <ArrowRight className="size-4 text-muted-foreground" />
                 </Link>
@@ -799,7 +801,7 @@ export function CustomerAccount() {
                           <ShoppingCart className="size-3.5 mr-1" /> Move to cart
                         </Button>
                         <Button asChild variant="outline" size="sm">
-                          <Link to="/products/$id" params={{ id: product.id }}>
+                          <Link to="/products/$id" params={{ id: product.productId || product.id }}>
                             Details
                           </Link>
                         </Button>

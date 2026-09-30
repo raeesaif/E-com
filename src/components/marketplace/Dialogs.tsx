@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { ImagePlus, Loader2, Mail, Store, Trash2, Upload, UploadCloud, User } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -1124,6 +1125,46 @@ export function ProductDetailsDialog({
             </div>
           </div>
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function LoginRequiredDialog() {
+  const { loginModalOpen, closeLoginModal } = useAppState();
+  const navigate = useNavigate();
+
+  const handleSignUp = () => {
+    closeLoginModal();
+    navigate({ to: "/register" });
+  };
+
+  return (
+    <Dialog open={loginModalOpen} onOpenChange={(open) => !open && closeLoginModal()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>You are not logged in</DialogTitle>
+          <DialogDescription className="pt-2 text-sm text-foreground/80">
+            You are not logged in. Please log in to continue.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={closeLoginModal}
+            className="w-full sm:w-auto"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSignUp}
+            className="w-full sm:w-auto font-semibold"
+          >
+            Sign Up
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -118,14 +118,69 @@ export function mapBackendProductToProduct(bp: BackendProduct): Product {
   };
 }
 
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL
+let productsListCache: CacheEntry<BackendProduct[]> | null = null;
+const singleProductCache = new Map<string, CacheEntry<BackendProduct>>();
+const inFlightRequests = new Map<string, Promise<any>>();
+
 export const productApi = {
-  list: async (): Promise<BackendProduct[]> => {
-    const res = await apiRequest<ApiEnvelope<BackendProduct[]> | BackendProduct[]>("/products");
-    if (Array.isArray(res)) return res;
-    return res.data ?? [];
+  invalidateCache: () => {
+    productsListCache = null;
+    singleProductCache.clear();
+  },
+
+  getCachedProduct: (productId: string): BackendProduct | null => {
+    const cached = singleProductCache.get(productId);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data;
+    }
+    if (productsListCache && Date.now() - productsListCache.timestamp < CACHE_TTL_MS) {
+      const found = productsListCache.data.find(
+        (p) => p.productId === productId || p._id === productId
+      );
+      if (found) return found;
+    }
+    return null;
+  },
+
+  list: async (options: { forceRefresh?: boolean } = {}): Promise<BackendProduct[]> => {
+    if (!options.forceRefresh && productsListCache && Date.now() - productsListCache.timestamp < CACHE_TTL_MS) {
+      return productsListCache.data;
+    }
+
+    if (inFlightRequests.has("list")) {
+      return inFlightRequests.get("list") as Promise<BackendProduct[]>;
+    }
+
+    const fetchPromise = (async () => {
+      try {
+        const res = await apiRequest<ApiEnvelope<BackendProduct[]> | BackendProduct[]>("/products");
+        const items = Array.isArray(res) ? res : res.data ?? [];
+        productsListCache = { data: items, timestamp: Date.now() };
+
+        // Pre-populate single product cache
+        items.forEach((p) => {
+          if (p.productId) singleProductCache.set(p.productId, { data: p, timestamp: Date.now() });
+          if (p._id) singleProductCache.set(p._id, { data: p, timestamp: Date.now() });
+        });
+
+        return items;
+      } finally {
+        inFlightRequests.delete("list");
+      }
+    })();
+
+    inFlightRequests.set("list", fetchPromise);
+    return fetchPromise;
   },
 
   create: async (payload: CreateProductPayload, accessToken: string): Promise<BackendProduct> => {
+    productApi.invalidateCache();
     const form = new FormData();
     form.append("name", payload.name.trim());
     form.append("description", payload.description.trim());
@@ -144,7 +199,9 @@ export const productApi = {
         },
       },
     );
-    return "data" in res && res.data ? res.data : (res as BackendProduct);
+    const data = "data" in res && res.data ? res.data : (res as BackendProduct);
+    productApi.invalidateCache();
+    return data;
   },
 
   update: async (
@@ -152,6 +209,7 @@ export const productApi = {
     payload: UpdateProductPayload,
     accessToken: string,
   ): Promise<BackendProduct> => {
+    productApi.invalidateCache();
     const body: Record<string, unknown> = {};
     if (payload.name !== undefined && payload.name.trim() !== "") {
       body.name = payload.name.trim();
@@ -190,15 +248,57 @@ export const productApi = {
         body: JSON.stringify(body),
       },
     );
-    return "data" in res && res.data ? res.data : (res as BackendProduct);
+    const data = "data" in res && res.data ? res.data : (res as BackendProduct);
+    productApi.invalidateCache();
+    return data;
   },
 
   remove: async (id: string, accessToken: string): Promise<void> => {
+    productApi.invalidateCache();
     await apiRequest<ApiEnvelope<null> | void>(`/products/${id}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
+    productApi.invalidateCache();
+  },
+
+  getProduct: async (productId: string, options: { forceRefresh?: boolean } = {}): Promise<BackendProduct> => {
+    if (!options.forceRefresh) {
+      const cached = productApi.getCachedProduct(productId);
+      if (cached) return cached;
+    }
+
+    const inFlightKey = `product_${productId}`;
+    if (inFlightRequests.has(inFlightKey)) {
+      return inFlightRequests.get(inFlightKey) as Promise<BackendProduct>;
+    }
+
+    const fetchPromise = (async () => {
+      try {
+        const res = await apiRequest<ApiEnvelope<BackendProduct> | BackendProduct>(
+          `/products/${productId}`,
+        );
+        const data = (res && typeof res === "object" && "data" in res && res.data)
+          ? res.data
+          : (res as BackendProduct);
+
+        if (data) {
+          if (data.productId) singleProductCache.set(data.productId, { data, timestamp: Date.now() });
+          if (data._id) singleProductCache.set(data._id, { data, timestamp: Date.now() });
+        }
+        return data;
+      } finally {
+        inFlightRequests.delete(inFlightKey);
+      }
+    })();
+
+    inFlightRequests.set(inFlightKey, fetchPromise);
+    return fetchPromise;
+  },
+
+  getById: async (productId: string): Promise<BackendProduct> => {
+    return productApi.getProduct(productId);
   },
 };

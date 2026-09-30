@@ -49,12 +49,60 @@ import { useAppState } from "./useAppState";
 import { CustomerAccount } from "./CustomerAccount";
 import { Navbar } from "./Shells";
 import { Footer } from "./Footer";
+import { Badge } from "@/components/ui/badge";
+import { productApi, mapBackendProductToProduct } from "@/api/product.api";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
+export interface HomePageFilterParams {
+  category?: string;
+}
+
+/**
+ * Frontend filter function for Home Page products.
+ * Structured cleanly so that when backend filtering is introduced later,
+ * this function can easily be replaced by/delegated to a backend query call.
+ */
+export function filterHomeProducts(
+  products: Product[],
+  filters: HomePageFilterParams,
+): Product[] {
+  if (!filters.category || filters.category === "All") {
+    return products;
+  }
+  return products.filter((p) => p.category === filters.category);
+}
+
 export function HomePage() {
-  const featured = seedProducts.slice(0, 4);
-  const discounted = seedProducts.filter((p) => p.discount > 0).slice(0, 4);
+  const { products } = useAppState();
+  const [selectedCategory, setSelectedCategory] = useState("All");
+
+  // Dynamic category options derived from live API products + default categories
+  const dynamicCategories = useMemo(() => {
+    const catsFromProducts = products.map((p) => p.category).filter(Boolean);
+    return Array.from(new Set(["All", ...catsFromProducts, ...categories]));
+  }, [products]);
+
+  // Frontend filtering logic applied directly on the Home page
+  const filteredProducts = useMemo(() => {
+    return filterHomeProducts(products, { category: selectedCategory });
+  }, [products, selectedCategory]);
+
+  // Hero preview products from live API (fallback to seed if initial load is pending)
+  const heroProducts = useMemo(() => {
+    return (products.length > 0 ? products : seedProducts).slice(0, 4);
+  }, [products]);
+
+  // Featured products matching current category filter
+  const featured = useMemo(() => {
+    return filteredProducts.slice(0, 8);
+  }, [filteredProducts]);
+
+  // Discounted products matching current category filter
+  const discounted = useMemo(() => {
+    return filteredProducts.filter((p) => p.discount > 0).slice(0, 4);
+  }, [filteredProducts]);
+
   return (
     <>
       <Navbar />
@@ -108,18 +156,18 @@ export function HomePage() {
               className="subtle-grid rounded-xl border bg-card p-5 shadow-sm"
             >
               <div className="grid grid-cols-2 gap-3.5">
-                {seedProducts.slice(0, 4).map((product) => (
+                {heroProducts.map((product) => (
                   <Link
                     key={product.id}
                     to="/products/$id"
-                    params={{ id: product.id }}
+                    params={{ id: product.productId || product.id }}
                     className="group relative overflow-hidden rounded-lg border bg-card transition-all duration-300 hover:shadow-md hover:border-primary/40"
                   >
                     <ProductImage
                       product={product}
                       className="aspect-square transition-transform duration-500 group-hover:scale-105"
                     />
-                    <span className="absolute bottom-2 left-2 right-2 rounded-md bg-card/90 px-2.5 py-1.5 text-xs font-bold backdrop-blur-md shadow-xs">
+                    <span className="absolute bottom-2 left-2 right-2 rounded-md bg-card/90 px-2.5 py-1.5 text-xs font-bold backdrop-blur-md shadow-xs truncate">
                       {product.name}
                     </span>
                   </Link>
@@ -128,42 +176,70 @@ export function HomePage() {
             </motion.div>
           </div>
         </section>
+
+        {/* Dynamic Category Filter Bar (works on Home page without redirect) */}
         <section className="page-shell py-10">
           <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-            <Button asChild variant="secondary">
-              <Link to="/shop">All products</Link>
-            </Button>
-            {categories.map((category) => (
-              <Button key={category} asChild variant="outline">
-                <Link to="/shop">{category}</Link>
-              </Button>
-            ))}
+            {dynamicCategories.map((category) => {
+              const isActive = selectedCategory === category;
+              return (
+                <Button
+                  key={category}
+                  type="button"
+                  variant={isActive ? "default" : "outline"}
+                  onClick={() => setSelectedCategory(category)}
+                  className={cn(
+                    "whitespace-nowrap transition-colors",
+                    isActive && "shadow-xs font-bold",
+                  )}
+                >
+                  {category === "All" ? "All products" : category}
+                </Button>
+              );
+            })}
           </div>
         </section>
+
+        {/* Featured Products (dynamically filtered on Home page) */}
         <section className="page-shell pb-16">
           <PageHeader
-            eyebrow="Editor’s picks"
-            title="Featured products"
+            eyebrow={selectedCategory === "All" ? "Editor’s picks" : "Category filter"}
+            title={selectedCategory === "All" ? "Featured products" : `${selectedCategory} products`}
+            description={
+              selectedCategory === "All"
+                ? undefined
+                : `Showing ${filteredProducts.length} ${filteredProducts.length === 1 ? "product" : "products"} in ${selectedCategory}.`
+            }
             action={
               <Button asChild variant="ghost">
                 <Link to="/shop">
-                  View all <ArrowRight />
+                  View full shop <ArrowRight />
                 </Link>
               </Button>
             }
           />
-          <ProductGrid products={featured} className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
+          {filteredProducts.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground">
+              No products found in "{selectedCategory}".
+            </div>
+          ) : (
+            <ProductGrid products={featured} className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
+          )}
         </section>
-        <section className="border-y bg-surface">
-          <div className="page-shell py-16">
-            <PageHeader
-              eyebrow="Limited offers"
-              title="Worth a closer look"
-              description="Selected products with considered prices while stock lasts."
-            />
-            <ProductGrid products={discounted} className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
-          </div>
-        </section>
+
+        {/* Limited Offers / Discounted Products */}
+        {discounted.length > 0 && (
+          <section className="border-y bg-surface">
+            <div className="page-shell py-16">
+              <PageHeader
+                eyebrow="Limited offers"
+                title="Worth a closer look"
+                description="Selected products with considered prices while stock lasts."
+              />
+              <ProductGrid products={discounted} className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
+            </div>
+          </section>
+        )}
       </main>
       <Footer />
     </>
@@ -300,19 +376,111 @@ export function ShopPage() {
 }
 
 export function ProductDetailsPage({ id }: { id: string }) {
-  const { products, addToCart, isInWishlist, toggleWishlist, addRecentlyViewed } = useAppState();
-  const product =
-    products.find((item) => item.id === id) ??
-    seedProducts.find((item) => item.id === id) ??
-    seedProducts[0];
+  const {
+    products,
+    addToCart,
+    isInWishlist,
+    toggleWishlist,
+    addRecentlyViewed,
+    user,
+    setLoginModalOpen,
+  } = useAppState();
+
+  // Check in-memory cache and state first to avoid redundant API calls
+  const cachedBp = productApi.getCachedProduct(id);
+  const foundInProducts = products.find(
+    (item) => item.id === id || item._id === id || item.productId === id,
+  );
+  const initialProduct = cachedBp
+    ? mapBackendProductToProduct(cachedBp)
+    : foundInProducts ?? null;
+
+  const [backendProduct, setBackendProduct] = useState<Product | null>(initialProduct);
+  const [loading, setLoading] = useState(!initialProduct);
   const [quantity, setQuantity] = useState(1);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // If we already have the product in state or cache, skip the network request
+    if (backendProduct || initialProduct) {
+      setLoading(false);
+      return;
+    }
+
+    const cached = productApi.getCachedProduct(id);
+    if (cached) {
+      setBackendProduct(mapBackendProductToProduct(cached));
+      setLoading(false);
+      return;
+    }
+
+    const found = products.find(
+      (item) => item.id === id || item._id === id || item.productId === id,
+    );
+    if (found) {
+      setBackendProduct(found);
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+
+    productApi
+      .getProduct(id)
+      .then((bp) => {
+        if (!active) return;
+        setBackendProduct(mapBackendProductToProduct(bp));
+      })
+      .catch((err) => {
+        console.warn("[ProductDetailsPage] Could not fetch product directly from API:", err);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id, products, backendProduct, initialProduct]);
+
+  const product =
+    backendProduct ??
+    products.find(
+      (item) => item.id === id || item._id === id || item.productId === id,
+    ) ??
+    seedProducts.find(
+      (item) => item.id === id || item._id === id || item.productId === id,
+    ) ??
+    seedProducts[0];
 
   useEffect(() => {
     if (product) {
       addRecentlyViewed(product.id);
     }
   }, [product?.id, addRecentlyViewed]);
+
+  if (loading && !product) {
+    return (
+      <>
+        <Navbar />
+        <main className="page-shell py-8">
+          <CustomerNavStrip current="shop" />
+          <BackLink to="/shop" label="Back to shop" />
+          <div className="grid gap-9 lg:grid-cols-2 animate-pulse">
+            <div className="aspect-square rounded-lg bg-muted" />
+            <div className="flex flex-col justify-center space-y-4">
+              <div className="h-6 w-1/4 rounded bg-muted" />
+              <div className="h-10 w-3/4 rounded bg-muted" />
+              <div className="h-4 w-1/2 rounded bg-muted" />
+              <div className="h-24 w-full rounded bg-muted" />
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   if (!product) return null;
   const isWishlisted = isInWishlist(product.id);
@@ -350,7 +518,7 @@ export function ProductDetailsPage({ id }: { id: string }) {
               <Button
                 size="lg"
                 disabled={!product.stock}
-                onClick={() => addToCart(product.id, quantity)}
+                onClick={() => addToCart(product.productId || product.id, quantity)}
                 className="flex-1 font-semibold"
               >
                 <ShoppingBag /> Add to cart
@@ -359,8 +527,15 @@ export function ProductDetailsPage({ id }: { id: string }) {
                 size="lg"
                 variant="secondary"
                 disabled={!product.stock}
-                onClick={() => {
-                  addToCart(product.id, quantity);
+                onClick={async () => {
+                  if (!user) {
+                    if (typeof window !== "undefined") {
+                      window.sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
+                    }
+                    setLoginModalOpen(true);
+                    return;
+                  }
+                  await addToCart(product.productId || product.id, quantity);
                   navigate({ to: "/checkout" });
                 }}
                 className="flex-1 font-semibold"
@@ -393,6 +568,30 @@ export function ProductDetailsPage({ id }: { id: string }) {
                 <p className="text-xs text-muted-foreground">Stripe-ready payment flow</p>
               </div>
             </div>
+
+            {/* Available payment methods */}
+            <div className="mt-4 rounded-md border bg-muted/30 p-4">
+              <div className="flex items-center gap-2">
+                <CreditCard className="size-4 text-primary" />
+                <p className="text-xs font-bold uppercase tracking-wider text-foreground">
+                  Available Payment Methods
+                </p>
+              </div>
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                <Badge variant="outline" className="bg-background text-xs font-medium">
+                  Credit / Debit Card
+                </Badge>
+                <Badge variant="outline" className="bg-background text-xs font-medium">
+                  Stripe Payment
+                </Badge>
+                <Badge variant="outline" className="bg-background text-xs font-medium">
+                  Cash on Delivery (COD)
+                </Badge>
+                <Badge variant="outline" className="bg-background text-xs font-medium">
+                  Bank Transfer
+                </Badge>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -406,7 +605,12 @@ export function ProductDetailsPage({ id }: { id: string }) {
 export function CartPage() {
   const { cart, products, updateQuantity, removeFromCart, clearCart, role } = useAppState();
   const lines = cart.flatMap((line) => {
-    const product = products.find((p) => p.id === line.productId);
+    const product = products.find(
+      (p) =>
+        p.id === line.productId ||
+        p._id === line.productId ||
+        p.productId === line.productId,
+    );
     return product ? [{ ...line, product }] : [];
   });
   const subtotal = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
@@ -568,7 +772,12 @@ export function CheckoutPage() {
   const [shippingZip, setShippingZip] = useState(defaultAddr?.zip || "94105");
 
   const total = cart.reduce((sum, line) => {
-    const p = products.find((item) => item.id === line.productId);
+    const p = products.find(
+      (item) =>
+        item.id === line.productId ||
+        item._id === line.productId ||
+        item.productId === line.productId,
+    );
     return sum + (p ? finalPrice(p) * line.quantity : 0);
   }, 0);
   const navigate = useNavigate();
@@ -691,7 +900,12 @@ export function CheckoutPage() {
             <h2 className="font-display text-lg font-bold">Order summary</h2>
             <div className="mt-5 grid gap-4 max-h-80 overflow-y-auto pr-1">
               {cart.map((line) => {
-                const p = products.find((item) => item.id === line.productId);
+                const p = products.find(
+                  (item) =>
+                    item.id === line.productId ||
+                    item._id === line.productId ||
+                    item.productId === line.productId,
+                );
                 return p ? (
                   <div key={line.productId} className="flex gap-3">
                     <ProductImage product={p} className="size-16 shrink-0 rounded-md border" />
@@ -853,7 +1067,7 @@ export function OrdersPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              addToCart(order.items?.[0]?.productId ?? "p1", 1);
+                              addToCart(order.items?.[0]?.productId ?? "p1", 1, { silent: true });
                               toast.success("Added to cart! Ready for checkout.");
                             }}
                           >
@@ -877,10 +1091,11 @@ export function OrdersPage() {
 export function OrderPage({ id }: { id: string }) {
   const { orders, products, addToCart } = useAppState();
   const order = orders.find((item) => item.id === id) ?? orders[0];
+  const fallbackProduct = products[0] ?? seedProducts[0]!;
   const sampleProduct =
     products.find(
       (p) => order?.items?.some((i) => i.productId === p.id) || p.name === order?.product,
-    ) ?? products[0];
+    ) ?? fallbackProduct;
 
   if (!order) return null;
 
@@ -899,7 +1114,7 @@ export function OrderPage({ id }: { id: string }) {
               <Button
                 size="sm"
                 onClick={() => {
-                  addToCart(order.items?.[0]?.productId ?? sampleProduct.id, 1);
+                  addToCart(order.items?.[0]?.productId ?? sampleProduct.id, 1, { silent: true });
                   toast.success("Added to cart! Ready for checkout.");
                 }}
               >

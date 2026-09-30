@@ -1,4 +1,6 @@
-const API_URL = import.meta.env["VITE_API_URL"] ?? "";
+const API_URL = (
+  import.meta.env["VITE_API_URL"] || "http://localhost:5050/api/v1"
+).replace(/\/+$/, "");
 
 export class ApiError extends Error {
   constructor(
