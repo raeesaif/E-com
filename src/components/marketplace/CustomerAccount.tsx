@@ -8,7 +8,6 @@ import {
   Clock,
   CreditCard,
   ExternalLink,
-  Heart,
   KeyRound,
   LayoutDashboard,
   LogOut,
@@ -44,14 +43,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  DiscountBadge,
   EmptyState,
   OrderStatusBadge,
   OrderStatusTimeline,
   ProductImage,
-  ProductPrice,
   RecentlyViewedStrip,
-  StockBadge,
 } from "./Common";
 import { useAppState } from "./useAppState";
 import { finalPrice, money, type CustomerAddress, type Order } from "@/lib/marketplace";
@@ -62,15 +58,12 @@ export function CustomerAccount() {
     user,
     role,
     cart,
-    wishlist,
     orders,
     addresses,
     products,
     updateUser,
     signOut,
     addToCart,
-    removeFromWishlist,
-    clearWishlist,
     saveAddress,
     deleteAddress,
     setDefaultAddress,
@@ -143,11 +136,6 @@ export function CustomerAccount() {
 
   // Most recent order for spotlight
   const latestOrder: Order | undefined = orders[0];
-
-  // Wishlist products
-  const wishlistProducts = wishlist
-    .map((id) => products.find((p) => p.id === id))
-    .filter((p): p is (typeof products)[0] => Boolean(p));
 
   const cartCount = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
@@ -223,15 +211,6 @@ export function CustomerAccount() {
     await addToCart(productId, 1);
   };
 
-  const handleMoveAllToCart = () => {
-    if (wishlistProducts.length === 0) return;
-    wishlistProducts.forEach((p) => {
-      if (p.stock > 0) addToCart(p.id, 1, { silent: true });
-    });
-    clearWishlist();
-    toast.success(`Moved ${wishlistProducts.length} item(s) to your cart!`);
-  };
-
   return (
     <div className="space-y-8">
       {/* Profile Header Hero Card */}
@@ -303,22 +282,6 @@ export function CustomerAccount() {
             </span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("wishlist")}
-            className="flex flex-col rounded-xl border bg-surface/50 p-4 text-left transition-all hover:bg-surface hover:shadow-xs"
-          >
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Wishlist Items
-            </span>
-            <span className="mt-1 font-display text-2xl font-black text-foreground">
-              {wishlist.length}
-            </span>
-            <span className="mt-1 text-[11px] text-primary font-medium flex items-center gap-1">
-              Manage saved <ArrowRight className="size-3" />
-            </span>
-          </button>
-
           <Link
             to="/cart"
             className="flex flex-col rounded-xl border bg-surface/50 p-4 text-left transition-all hover:bg-surface hover:shadow-xs"
@@ -361,9 +324,6 @@ export function CustomerAccount() {
             </TabsTrigger>
             <TabsTrigger value="orders" className="gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold sm:text-sm">
               <Package className="size-4" /> My Orders ({orders.length})
-            </TabsTrigger>
-            <TabsTrigger value="wishlist" className="gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold sm:text-sm">
-              <Heart className="size-4" /> Wishlist ({wishlist.length})
             </TabsTrigger>
             <TabsTrigger value="profile" className="gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold sm:text-sm">
               <UserRound className="size-4" /> Profile & Settings
@@ -453,17 +413,6 @@ export function CustomerAccount() {
                   </span>
                   <ArrowRight className="size-4 text-muted-foreground" />
                 </Link>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("wishlist")}
-                  className="flex items-center justify-between rounded-lg border bg-surface/60 p-3 text-sm font-semibold transition-colors hover:bg-surface text-left"
-                >
-                  <span className="flex items-center gap-2.5">
-                    <Heart className="size-4 text-destructive" /> View Saved Wishlist ({wishlist.length} items)
-                  </span>
-                  <ArrowRight className="size-4 text-muted-foreground" />
-                </button>
 
                 <button
                   type="button"
@@ -701,119 +650,6 @@ export function CustomerAccount() {
         </TabsContent>
 
         {/* ========================================================================= */}
-        {/* TAB 3: WISHLIST */}
-        {/* ========================================================================= */}
-        <TabsContent value="wishlist" className="mt-6 space-y-6">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <h2 className="font-display text-xl font-bold">Saved Wishlist</h2>
-              <p className="text-xs text-muted-foreground">
-                Items you loved and saved for later. Ready to add to cart whenever you want!
-              </p>
-            </div>
-            {wishlistProducts.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={handleMoveAllToCart}
-                  className="gap-1.5 font-semibold"
-                >
-                  <ShoppingCart className="size-4" /> Move all to cart
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearWishlist}
-                  className="text-xs text-muted-foreground hover:text-destructive"
-                >
-                  Clear all
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {wishlistProducts.length === 0 ? (
-            <EmptyState
-              icon={<Heart className="size-6 text-destructive" />}
-              title="Your wishlist is empty"
-              description="Browse the marketplace and tap the heart icon on any product to save it here."
-              action={
-                <Button asChild size="sm">
-                  <Link to="/shop">Explore products</Link>
-                </Button>
-              }
-            />
-          ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {wishlistProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="group relative flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all hover:shadow-md"
-                >
-                  <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                    <ProductImage
-                      product={product}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                    <div className="absolute left-2.5 top-2.5">
-                      <DiscountBadge discount={product.discount} />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFromWishlist(product.id)}
-                      title="Remove from wishlist"
-                      aria-label={`Remove ${product.name} from wishlist`}
-                      className="absolute right-2.5 top-2.5 grid size-8 place-items-center rounded-full bg-background/90 text-destructive shadow-xs backdrop-blur-md transition-transform hover:scale-110"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
-
-                  <div className="flex flex-1 flex-col p-4">
-                    <div className="mb-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-semibold text-primary truncate">{product.category}</p>
-                        <StockBadge stock={product.stock} />
-                      </div>
-                      <h3
-                        className="mt-1.5 font-display text-base font-bold text-foreground leading-snug line-clamp-2"
-                        title={product.name}
-                      >
-                        {product.name}
-                      </h3>
-                      <p className="mt-1 text-xs text-muted-foreground">by {product.storeName || product.seller}</p>
-                    </div>
-
-                    <div className="mt-auto pt-4">
-                      <ProductPrice product={product} />
-
-                      <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
-                        <Button
-                          size="sm"
-                          disabled={!product.stock}
-                          onClick={() => {
-                            addToCart(product.id);
-                            removeFromWishlist(product.id);
-                          }}
-                          className="font-semibold"
-                        >
-                          <ShoppingCart className="size-3.5 mr-1" /> Move to cart
-                        </Button>
-                        <Button asChild variant="outline" size="sm">
-                          <Link to="/products/$id" params={{ id: product.productId || product.id }}>
-                            Details
-                          </Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* ========================================================================= */}
         {/* TAB 4: PROFILE & SETTINGS */}
         {/* ========================================================================= */}
         <TabsContent value="profile" className="mt-6 space-y-6">
@@ -934,7 +770,7 @@ export function CustomerAccount() {
                   <div>
                     <span className="font-semibold text-foreground">Special Deals & Offers</span>
                     <p className="text-xs text-muted-foreground">
-                      Receive weekly curated discounts on your wishlist brands.
+                      Receive weekly curated discounts.
                     </p>
                   </div>
                 </label>
@@ -1260,7 +1096,7 @@ export function CustomerAccount() {
                   Sign out of E-Com
                 </h4>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  You can sign back in anytime to access your orders and saved wishlist.
+                  You can sign back in anytime to access your orders.
                 </p>
                 <Button
                   variant="destructive"

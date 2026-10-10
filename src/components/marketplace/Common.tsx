@@ -5,7 +5,6 @@ import {
   ChevronRight,
   CircleAlert,
   Clock,
-  Heart,
   LoaderCircle,
   Minus,
   Moon,
@@ -148,8 +147,7 @@ export function SearchInput({
 }
 
 export function ProductCard({ product }: { product: Product }) {
-  const { addToCart, isInWishlist, toggleWishlist } = useAppState();
-  const wishlisted = isInWishlist(product.id);
+  const { addToCart } = useAppState();
 
   return (
     <motion.article
@@ -167,24 +165,6 @@ export function ProductCard({ product }: { product: Product }) {
         />
         <div className="absolute left-3 top-3 flex gap-2">
           <DiscountBadge discount={product.discount} />
-        </div>
-        <div className="absolute right-3 top-3 z-10">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleWishlist(product.id);
-            }}
-            aria-label={wishlisted ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`}
-            title={wishlisted ? "Remove from wishlist" : "Save to wishlist"}
-            className={cn(
-              "grid size-8 place-items-center rounded-full bg-background/90 backdrop-blur-md shadow-xs transition-transform duration-200 hover:scale-110",
-              wishlisted ? "text-destructive" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <Heart className={cn("size-4 transition-colors", wishlisted && "fill-current text-destructive")} />
-          </button>
         </div>
       </div>
       <div className="flex flex-1 flex-col p-4">
@@ -261,6 +241,48 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
       )}
     >
       {status}
+    </Badge>
+  );
+}
+
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+/** Badge for backend (lowercase) order statuses: pending, processing, shipped, delivered, cancelled. */
+export function ApiOrderStatusBadge({ status }: { status: string }) {
+  return (
+    <Badge
+      className={cn(
+        "shadow-none",
+        status === "delivered"
+          ? "bg-success text-success-foreground"
+          : status === "shipped"
+            ? "bg-info text-info-foreground"
+            : status === "pending"
+              ? "bg-warning text-warning-foreground"
+              : status === "cancelled"
+                ? "bg-destructive text-destructive-foreground"
+                : "bg-secondary text-secondary-foreground",
+      )}
+    >
+      {capitalize(status)}
+    </Badge>
+  );
+}
+
+/** Badge for backend payment statuses: pending, paid, failed. */
+export function PaymentBadge({ payment }: { payment: string }) {
+  return (
+    <Badge
+      className={cn(
+        "shadow-none",
+        payment === "paid"
+          ? "bg-success text-success-foreground"
+          : payment === "failed"
+            ? "bg-destructive text-destructive-foreground"
+            : "bg-warning text-warning-foreground",
+      )}
+    >
+      {capitalize(payment)}
     </Badge>
   );
 }

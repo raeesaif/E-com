@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   CreditCard,
   Heart,
+  Loader2,
   Package,
   PackageCheck,
   RotateCcw,
@@ -14,7 +15,7 @@ import {
   Trash2,
   Truck,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +28,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { categories, finalPrice, money, products as seedProducts } from "@/lib/marketplace";
+import { categories, finalPrice, money, products as seedProducts, type Product } from "@/lib/marketplace";
 import {
+  ApiOrderStatusBadge,
   BackLink,
   CustomerNavStrip,
   DiscountBadge,
@@ -36,6 +38,7 @@ import {
   OrderStatusBadge,
   OrderStatusTimeline,
   PageHeader,
+  PaymentBadge,
   Pagination,
   ProductGrid,
   ProductImage,
@@ -52,6 +55,7 @@ import { Footer } from "./Footer";
 import { Badge } from "@/components/ui/badge";
 import { productApi, mapBackendProductToProduct } from "@/api/product.api";
 import { categoryApi, type ActiveCategoryItem } from "@/api/category.api";
+import { orderApi, formatOrderDate, type CustomerOrder } from "@/api/order.api";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
@@ -437,6 +441,7 @@ export function ProductDetailsPage({ id }: { id: string }) {
     toggleWishlist,
     addRecentlyViewed,
     user,
+    accessToken,
     setLoginModalOpen,
   } = useAppState();
 
@@ -452,7 +457,45 @@ export function ProductDetailsPage({ id }: { id: string }) {
   const [backendProduct, setBackendProduct] = useState<Product | null>(initialProduct);
   const [loading, setLoading] = useState(!initialProduct);
   const [quantity, setQuantity] = useState(1);
+  const [buyingNow, setBuyingNow] = useState(false);
   const navigate = useNavigate();
+
+  const handleBuyNow = async () => {
+    if (!user || !accessToken) {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
+      }
+      setLoginModalOpen(true);
+      return;
+    }
+
+    if (buyingNow) return;
+
+    const targetProductId = product.productId || product.id || product._id;
+    if (!targetProductId) {
+      toast.error("Product information is missing. Please refresh the page.");
+      return;
+    }
+
+    setBuyingNow(true);
+    try {
+      const session = await orderApi.checkout(accessToken, {
+        productId: String(targetProductId),
+        quantity,
+      });
+
+      if (!session?.checkoutUrl) {
+        throw new Error("Checkout session did not return a valid URL");
+      }
+
+      window.location.href = session.checkoutUrl;
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to initiate Stripe checkout",
+      );
+      setBuyingNow(false);
+    }
+  };
 
   useEffect(() => {
     // If we already have the product in state or cache, skip the network request
@@ -571,7 +614,7 @@ export function ProductDetailsPage({ id }: { id: string }) {
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Button
                 size="lg"
-                disabled={!product.stock}
+                disabled={!product.stock || buyingNow}
                 onClick={() => addToCart(product.productId || product.id, quantity)}
                 className="flex-1 font-semibold"
               >
@@ -580,21 +623,17 @@ export function ProductDetailsPage({ id }: { id: string }) {
               <Button
                 size="lg"
                 variant="secondary"
-                disabled={!product.stock}
-                onClick={async () => {
-                  if (!user) {
-                    if (typeof window !== "undefined") {
-                      window.sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
-                    }
-                    setLoginModalOpen(true);
-                    return;
-                  }
-                  await addToCart(product.productId || product.id, quantity);
-                  navigate({ to: "/checkout" });
-                }}
+                disabled={!product.stock || buyingNow}
+                onClick={handleBuyNow}
                 className="flex-1 font-semibold"
               >
-                Buy now
+                {buyingNow ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" /> Redirecting to payment…
+                  </>
+                ) : (
+                  "Buy now"
+                )}
               </Button>
               <Button
                 size="lg"
@@ -657,7 +696,23 @@ export function ProductDetailsPage({ id }: { id: string }) {
 }
 
 export function CartPage() {
-  const { cart, products, updateQuantity, removeFromCart, clearCart, role } = useAppState();
+  const { cart, products, updateQuantity, removeFromCart, clearCart, role, accessToken } =
+    useAppState();
+  const [checkingOut, setCheckingOut] = useState(false);
+
+  const handleStripeCheckout = async () => {
+    if (!accessToken || checkingOut) return;
+    setCheckingOut(true);
+    try {
+      const session = await orderApi.checkout(accessToken);
+      // Stripe-hosted checkout page; leave the loading state on while the browser navigates.
+      window.location.href = session.checkoutUrl;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not start checkout");
+      setCheckingOut(false);
+    }
+  };
+
   const lines = cart.flatMap((line) => {
     const product = products.find(
       (p) =>
@@ -791,11 +846,30 @@ export function CartPage() {
             subtotal={subtotal}
             total={total}
             action={
-              <Button asChild size="lg" className="w-full font-semibold">
-                <Link to="/checkout">
-                  Proceed to checkout <ArrowRight />
-                </Link>
-              </Button>
+              role === "customer" && accessToken ? (
+                <Button
+                  size="lg"
+                  className="w-full font-semibold"
+                  onClick={handleStripeCheckout}
+                  disabled={checkingOut}
+                >
+                  {checkingOut ? (
+                    <>
+                      <Loader2 className="animate-spin" /> Redirecting to payment…
+                    </>
+                  ) : (
+                    <>
+                      Checkout <ArrowRight />
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button asChild size="lg" className="w-full font-semibold">
+                  <Link to="/checkout">
+                    Proceed to checkout <ArrowRight />
+                  </Link>
+                </Button>
+              )
             }
           />
         </div>
@@ -992,26 +1066,29 @@ export function CheckoutPage() {
 }
 
 export function OrdersPage() {
-  const { orders, addToCart } = useAppState();
-  const [filter, setFilter] = useState<"all" | "active" | "delivered">("all");
-  const [search, setSearch] = useState("");
+  const { accessToken } = useAppState();
+  const [orders, setOrders] = useState<CustomerOrder[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = orders.filter((order) => {
-    const matchesFilter =
-      filter === "all"
-        ? true
-        : filter === "active"
-          ? ["Pending", "Confirmed", "Processing", "Shipped"].includes(order.status)
-          : order.status === "Delivered";
-
-    const matchesSearch =
-      !search.trim() ||
-      order.id.toLowerCase().includes(search.toLowerCase()) ||
-      order.product.toLowerCase().includes(search.toLowerCase()) ||
-      order.seller.toLowerCase().includes(search.toLowerCase());
-
-    return matchesFilter && matchesSearch;
-  });
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    setError(null);
+    orderApi
+      .listMine(accessToken)
+      .then((rows) => {
+        if (!cancelled) setOrders(rows);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : "Could not load your orders";
+        setError(message);
+        toast.error(message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
 
   return (
     <>
@@ -1020,7 +1097,7 @@ export function OrdersPage() {
         <CustomerNavStrip current="orders" />
         <PageHeader
           title="My orders"
-          description="Track every purchase, view delivery milestones, and re-order goods."
+          description="Track every purchase and its payment and delivery status."
           action={
             <Button asChild variant="outline" size="sm">
               <Link to="/shop">
@@ -1030,50 +1107,21 @@ export function OrdersPage() {
           }
         />
 
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
-            <Button
-              variant={filter === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter("all")}
-              className="text-xs h-8"
-            >
-              All orders ({orders.length})
-            </Button>
-            <Button
-              variant={filter === "active" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter("active")}
-              className="text-xs h-8"
-            >
-              Active / In Transit
-            </Button>
-            <Button
-              variant={filter === "delivered" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter("delivered")}
-              className="text-xs h-8"
-            >
-              Delivered
-            </Button>
+        {orders === null && !error ? (
+          <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Loading your orders…
           </div>
-
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search orders..."
-              className="h-9 pl-8 text-xs"
-            />
-          </div>
-        </div>
-
-        {filtered.length === 0 ? (
+        ) : error ? (
           <EmptyState
             icon={<Package className="size-8 text-muted-foreground" />}
-            title="No orders found"
-            description="You don't have any orders matching the selected filter."
+            title="Couldn't load your orders"
+            description={error}
+          />
+        ) : orders && orders.length === 0 ? (
+          <EmptyState
+            icon={<Package className="size-8 text-muted-foreground" />}
+            title="No orders yet"
+            description="Once you complete a purchase it will show up here."
             action={
               <Button asChild size="sm">
                 <Link to="/shop">Start shopping</Link>
@@ -1086,7 +1134,7 @@ export function OrdersPage() {
               <table className="w-full min-w-[760px] text-sm">
                 <thead className="border-b bg-muted/60">
                   <tr>
-                    {["Order", "Date", "Products", "Total", "Payment", "Status", ""].map((h) => (
+                    {["Order", "Date", "Products", "Total", "Payment", "Status"].map((h) => (
                       <th key={h} className="px-4 py-3 text-left font-medium text-muted-foreground">
                         {h}
                       </th>
@@ -1094,39 +1142,44 @@ export function OrdersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((order) => (
+                  {orders?.map((order) => (
                     <tr
-                      key={order.id}
+                      key={order.orderId}
                       className="border-b last:border-0 hover:bg-muted/20 transition-colors"
                     >
-                      <td className="px-4 py-4 font-mono font-bold text-foreground">{order.id}</td>
-                      <td className="px-4 py-4 text-muted-foreground">{order.date}</td>
-                      <td className="px-4 py-4 font-medium">
-                        <div>{order.product}</div>
-                        <span className="text-xs text-muted-foreground">from {order.seller}</span>
+                      <td className="px-4 py-4 font-mono font-bold text-foreground">
+                        {order.orderId}
                       </td>
-                      <td className="px-4 py-4 font-bold">{money(order.amount)}</td>
-                      <td className="px-4 py-4">{order.payment}</td>
-                      <td className="px-4 py-4">
-                        <OrderStatusBadge status={order.status} />
+                      <td className="px-4 py-4 text-muted-foreground">
+                        {formatOrderDate(order.date)}
                       </td>
                       <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <Button asChild variant="outline" size="sm">
-                            <Link to="/orders/$id" params={{ id: order.id }}>
-                              View details
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              addToCart(order.items?.[0]?.productId ?? "p1", 1);
-                            }}
-                          >
-                            Buy again
-                          </Button>
+                        <div className="space-y-2">
+                          {order.products.map((p, index) => (
+                            <div key={`${p.name}-${index}`} className="flex items-center gap-2.5">
+                              {p.image ? (
+                                <img
+                                  src={p.image}
+                                  alt={p.name}
+                                  className="size-9 shrink-0 rounded-md border object-cover"
+                                />
+                              ) : (
+                                <div className="size-9 shrink-0 rounded-md border bg-muted" />
+                              )}
+                              <span className="font-medium">
+                                {p.name}{" "}
+                                <span className="text-muted-foreground">× {p.quantity}</span>
+                              </span>
+                            </div>
+                          ))}
                         </div>
+                      </td>
+                      <td className="px-4 py-4 font-bold">{money(order.total)}</td>
+                      <td className="px-4 py-4">
+                        <PaymentBadge payment={order.payment} />
+                      </td>
+                      <td className="px-4 py-4">
+                        <ApiOrderStatusBadge status={order.status} />
                       </td>
                     </tr>
                   ))}
@@ -1308,5 +1361,88 @@ function Summary({
       </div>
       <div className="mt-6">{action}</div>
     </aside>
+  );
+}
+
+export function OrderSuccessPage({ sessionId }: { sessionId?: string }) {
+  const { accessToken, refreshCart } = useAppState();
+  const [order, setOrder] = useState<CustomerOrder | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // Guards against React strict-mode double effects: verify must run once per page load.
+  const verifiedRef = useRef(false);
+
+  useEffect(() => {
+    if (!sessionId) {
+      setError("Missing payment session. If you were charged, check My Orders.");
+      return;
+    }
+    if (!accessToken || verifiedRef.current) return;
+    verifiedRef.current = true;
+    orderApi
+      .verify(sessionId, accessToken)
+      .then((verified) => {
+        setOrder(verified);
+        // The backend empties the cart once payment is confirmed.
+        return refreshCart();
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Could not verify your payment");
+      });
+  }, [sessionId, accessToken, refreshCart]);
+
+  const loading = !order && !error;
+
+  return (
+    <>
+      <Navbar />
+      <main className="page-shell py-16">
+        <div className="mx-auto max-w-lg rounded-2xl border bg-card p-8 text-center shadow-sm">
+          {loading ? (
+            <>
+              <Loader2 className="mx-auto size-10 animate-spin text-primary" />
+              <h1 className="mt-4 font-display text-xl font-extrabold">Confirming your payment…</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Please don't close this page.</p>
+            </>
+          ) : error ? (
+            <>
+              <h1 className="font-display text-xl font-extrabold">We couldn't confirm your payment</h1>
+              <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+            </>
+          ) : order?.payment === "paid" ? (
+            <>
+              <CheckCircle2 className="mx-auto size-12 text-success" />
+              <h1 className="mt-4 font-display text-2xl font-extrabold">Payment successful</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Order <span className="font-mono font-bold text-foreground">{order.orderId}</span>{" "}
+                is confirmed — {money(order.total)}.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="font-display text-2xl font-extrabold">
+                Payment {order?.payment === "failed" ? "failed" : "pending"}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Order <span className="font-mono font-bold text-foreground">{order?.orderId}</span>{" "}
+                {order?.payment === "failed"
+                  ? "wasn't paid. You can try checking out again from your cart."
+                  : "is still awaiting payment confirmation. Check My Orders in a moment."}
+              </p>
+            </>
+          )}
+          {!loading && (
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              <Button asChild>
+                <Link to="/orders">My Orders</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/shop">Continue shopping</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      </main>
+      <Footer />
+    </>
   );
 }

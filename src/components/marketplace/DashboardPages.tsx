@@ -61,11 +61,25 @@ import {
   ProductDialog,
   ProductDetailsDialog,
 } from "./Dialogs";
-import { OrderStatusBadge, PageHeader, ProductImage, StatsCard, StockBadge } from "./Common";
+import {
+  ApiOrderStatusBadge,
+  OrderStatusBadge,
+  PageHeader,
+  PaymentBadge,
+  ProductImage,
+  StatsCard,
+  StockBadge,
+} from "./Common";
 import { useAppState } from "./useAppState";
 import { authApi } from "@/api/auth.api";
 import { categoryApi, type CategoryItem } from "@/api/category.api";
 import { productApi } from "@/api/product.api";
+import {
+  orderApi,
+  formatOrderDate,
+  type SellerOrderRow,
+  type SellerUpdatableStatus,
+} from "@/api/order.api";
 import { Switch } from "@/components/ui/switch";
 import { ApiError } from "@/api/client";
 
@@ -333,6 +347,138 @@ export function SellerProductsPage() {
                         }
                       />
                     </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </DataWrap>
+    </div>
+  );
+}
+
+const SELLER_STATUS_OPTIONS: SellerUpdatableStatus[] = ["processing", "shipped", "delivered"];
+
+export function SellerOrdersPage() {
+  const { accessToken } = useAppState();
+  const [rows, setRows] = useState<SellerOrderRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      setError(null);
+      setRows(await orderApi.listSeller(accessToken));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not load orders";
+      setError(message);
+      toast.error(message);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const changeStatus = async (orderId: string, status: SellerUpdatableStatus) => {
+    if (!accessToken) return;
+    setUpdatingId(orderId);
+    try {
+      await orderApi.updateSellerStatus(orderId, status, accessToken);
+      toast.success(`Order ${orderId} marked as ${status}`);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update order status");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  return (
+    <div>
+      <PageHeader
+        title="Orders"
+        description="Orders that include products from your store."
+        action={
+          <Button variant="outline" size="sm" onClick={() => void load()}>
+            <RefreshCw className="size-4" /> Refresh
+          </Button>
+        }
+      />
+      <DataWrap>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {[
+                "Order ID",
+                "Customer",
+                "Product",
+                "Qty",
+                "Amount",
+                "Payment",
+                "Status",
+                "Date",
+                "Update status",
+              ].map((h) => (
+                <TableHead key={h}>{h}</TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows === null && !error ? (
+              <TableRow>
+                <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                  <Loader2 className="mr-2 inline size-4 animate-spin" /> Loading orders…
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                  {error}
+                </TableCell>
+              </TableRow>
+            ) : rows && rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                  No orders for your products yet.
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows?.map((row) => (
+                <TableRow key={row.itemId || `${row.orderId}-${row.product}`}>
+                  <TableCell className="font-bold">{row.orderId}</TableCell>
+                  <TableCell>{row.customer?.name}</TableCell>
+                  <TableCell>{row.product}</TableCell>
+                  <TableCell>{row.quantity}</TableCell>
+                  <TableCell>{money(row.amount)}</TableCell>
+                  <TableCell>
+                    <PaymentBadge payment={row.payment} />
+                  </TableCell>
+                  <TableCell>
+                    <ApiOrderStatusBadge status={row.status} />
+                  </TableCell>
+                  <TableCell>{formatOrderDate(row.date)}</TableCell>
+                  <TableCell>
+                    <Select
+                      value=""
+                      disabled={updatingId === row.orderId || row.status === "cancelled"}
+                      onValueChange={(value) =>
+                        void changeStatus(row.orderId, value as SellerUpdatableStatus)
+                      }
+                    >
+                      <SelectTrigger className="h-8 w-[130px] text-xs">
+                        <SelectValue placeholder="Set status…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SELLER_STATUS_OPTIONS.map((status) => (
+                          <SelectItem key={status} value={status} className="capitalize">
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                 </TableRow>
               ))

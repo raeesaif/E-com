@@ -4,7 +4,6 @@ import {
   Boxes,
   ChevronDown,
   CircleUserRound,
-  Heart,
   LayoutDashboard,
   ListOrdered,
   Loader2,
@@ -40,7 +39,7 @@ import {
 import { toast } from "sonner";
 
 export function Navbar() {
-  const { cart, wishlist, orders, role, user, signOut } = useAppState();
+  const { cart, orders, role, user, signOut } = useAppState();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const roleLabel = role ? `${role.charAt(0).toUpperCase()}${role.slice(1)} panel` : "";
@@ -72,32 +71,6 @@ export function Navbar() {
         </nav>
         <div className="ml-auto flex items-center gap-1">
           <ThemeToggle />
-
-          {/* Wishlist Link Button */}
-          {role === "customer" && (
-            <Button
-              asChild
-              variant="ghost"
-              size="icon"
-              className="relative"
-              aria-label="Wishlist"
-              title="Saved wishlist"
-            >
-              <Link to="/profile">
-                <Heart className="size-5" />
-                {wishlist.length > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                    className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground"
-                  >
-                    {wishlist.length}
-                  </motion.span>
-                )}
-              </Link>
-            </Button>
-          )}
 
           {/* Cart Link Button */}
           <Button asChild variant="ghost" size="icon" className="relative" aria-label="Cart" title="Shopping Cart">
@@ -147,11 +120,6 @@ export function Navbar() {
                   <DropdownMenuItem asChild className="cursor-pointer">
                     <Link to="/orders" className="flex items-center gap-2">
                       <Package className="size-4" /> Order History ({orders.length})
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link to="/profile" className="flex items-center gap-2">
-                      <Heart className="size-4 text-destructive" /> Wishlist ({wishlist.length})
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="cursor-pointer">
@@ -246,16 +214,6 @@ export function Navbar() {
                   onClick={() => setOpen(false)}
                 >
                   <Link to="/orders">My Orders</Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="justify-start"
-                  onClick={() => setOpen(false)}
-                >
-                  <Link to="/profile">
-                    Wishlist ({wishlist.length})
-                  </Link>
                 </Button>
               </>
             )}

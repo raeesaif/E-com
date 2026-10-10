@@ -43,7 +43,8 @@ export interface UpdateProductPayload {
   price?: number;
   discount?: number;
   stock?: number;
-  productImage?: string;
+  /** Pass a File to upload a new image, a URL string to keep/set a remote URL, or omit to leave unchanged. */
+  productImage?: File | string;
 }
 
 export interface ApiEnvelope<T> {
@@ -210,29 +211,53 @@ export const productApi = {
     accessToken: string,
   ): Promise<BackendProduct> => {
     productApi.invalidateCache();
-    const body: Record<string, unknown> = {};
-    if (payload.name !== undefined && payload.name.trim() !== "") {
-      body.name = payload.name.trim();
+
+    // If a new image File was provided, use multipart/form-data
+    if (payload.productImage instanceof File) {
+      const form = new FormData();
+      if (payload.name !== undefined && payload.name.trim() !== "") form.append("name", payload.name.trim());
+      if (payload.description !== undefined && payload.description.trim() !== "") form.append("description", payload.description.trim());
+      if (payload.category !== undefined && payload.category.trim() !== "") form.append("category", payload.category.trim());
+      if (payload.price !== undefined && !isNaN(Number(payload.price))) form.append("price", String(payload.price));
+      if (payload.discount !== undefined && !isNaN(Number(payload.discount))) form.append("discount", String(payload.discount));
+      if (payload.stock !== undefined && !isNaN(Number(payload.stock))) form.append("stock", String(payload.stock));
+      form.append("productImage", payload.productImage); // actual File object
+
+      const res = await apiFormRequest<ApiEnvelope<BackendProduct> | BackendProduct>(
+        `/products/${id}`,
+        form,
+        {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${accessToken}` },
+          // NOTE: do NOT set Content-Type — browser sets it with the multipart boundary
+        },
+      );
+      const data = "data" in res && res.data ? res.data : (res as BackendProduct);
+      productApi.invalidateCache();
+      return data;
     }
-    if (payload.description !== undefined && payload.description.trim() !== "") {
-      body.description = payload.description.trim();
-    }
-    if (payload.category !== undefined && payload.category.trim() !== "") {
-      body.category = payload.category.trim();
-    }
-    if (payload.price !== undefined && !isNaN(Number(payload.price))) {
-      body.price = Number(payload.price);
-    }
-    if (payload.discount !== undefined && !isNaN(Number(payload.discount))) {
-      body.discount = Number(payload.discount);
-    }
-    if (payload.stock !== undefined && !isNaN(Number(payload.stock))) {
-      body.stock = Number(payload.stock);
-    }
+
+    // No new image — send as JSON
+    const body: {
+      name?: string;
+      description?: string;
+      category?: string;
+      price?: number;
+      discount?: number;
+      stock?: number;
+      productImage?: string;
+    } = {};
+    if (payload.name !== undefined && payload.name.trim() !== "") body.name = payload.name.trim();
+    if (payload.description !== undefined && payload.description.trim() !== "") body.description = payload.description.trim();
+    if (payload.category !== undefined && payload.category.trim() !== "") body.category = payload.category.trim();
+    if (payload.price !== undefined && !isNaN(Number(payload.price))) body.price = Number(payload.price);
+    if (payload.discount !== undefined && !isNaN(Number(payload.discount))) body.discount = Number(payload.discount);
+    if (payload.stock !== undefined && !isNaN(Number(payload.stock))) body.stock = Number(payload.stock);
     if (
-      payload.productImage !== undefined &&
       typeof payload.productImage === "string" &&
-      payload.productImage.trim() !== ""
+      payload.productImage.trim() !== "" &&
+      !payload.productImage.startsWith("blob:") &&
+      !payload.productImage.startsWith("data:")
     ) {
       body.productImage = payload.productImage.trim();
     }

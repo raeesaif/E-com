@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { OrdersManagementPage } from "@/components/marketplace/DashboardPages";
+import { SellerOrdersPage } from "@/components/marketplace/DashboardPages";
 export const Route = createFileRoute("/seller/orders")({
   head: () => ({
     meta: [
@@ -9,5 +9,5 @@ export const Route = createFileRoute("/seller/orders")({
       { property: "og:description", content: "View and update orders containing your products." },
     ],
   }),
-  component: () => <OrdersManagementPage />,
+  component: () => <SellerOrdersPage />,
 });

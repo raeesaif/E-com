@@ -183,10 +183,12 @@ export function ProductDialog({
   trigger: React.ReactNode;
 }) {
   const { role, accessToken, user, refreshProducts } = useAppState();
+  const navigate = useNavigate();
   const [activeCategories, setActiveCategories] = useState<ActiveCategoryItem[]>(() =>
     categoryApi.getCachedActive(),
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const empty: Product = {
     id: `p-${Date.now()}`,
@@ -213,26 +215,29 @@ export function ProductDialog({
 
     const validTypes = ["image/jpeg", "image/jpg", "image/png"];
     if (!validTypes.includes(file.type)) {
-      toast.error("Please upload a valid image (.jpg, .jpeg, or .png)");
+      setImageError("Only JPG/JPEG or PNG images are allowed.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image file must be under 5MB");
+      setImageError(`Image is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Max 5 MB allowed.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
+    setImageError(null);
     setSelectedFile(file);
     const objectUrl = URL.createObjectURL(file);
     setPreviewUrl(objectUrl);
     field("productImage", objectUrl);
-    toast.success(`Image selected: ${file.name}`);
   };
 
   const handleClearImage = () => {
     setSelectedFile(null);
-    setPreviewUrl(null);
-    field("productImage", "");
+    setPreviewUrl(product?.productImage ?? null);
+    field("productImage", product?.productImage ?? "");
+    setImageError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -241,6 +246,7 @@ export function ProductDialog({
       setDraft(product ?? { ...empty, id: `p-${Date.now()}` });
       setSelectedFile(null);
       setPreviewUrl(product?.productImage ?? null);
+      setImageError(null);
       categoryApi
         .listActive()
         .then((cats) => {
@@ -343,8 +349,13 @@ export function ProductDialog({
     }
 
     // Editing existing product
-    const targetProductId = product._id || product.id;
-    if (targetProductId && accessToken && (role === "seller" || user?.role === "seller")) {
+    // Always use the Mongo _id for the PATCH URL
+    const mongoId = product._id;
+    if (!mongoId) {
+      toast.error("Product ID is missing. Cannot update.");
+      return;
+    }
+    if (accessToken && (role === "seller" || user?.role === "seller")) {
       try {
         setIsSaving(true);
         const categoryId =
@@ -364,38 +375,38 @@ export function ProductDialog({
           updatePayload.category = categoryId;
         }
 
-        const imgUrl =
-          (!previewUrl?.startsWith("blob:") ? previewUrl : null) ||
-          (!draft.productImage?.startsWith("blob:") ? draft.productImage : null) ||
-          (!product.productImage?.startsWith("blob:") ? product.productImage : null);
-
-        if (imgUrl && !imgUrl.startsWith("blob:") && !imgUrl.startsWith("data:")) {
-          updatePayload.productImage = imgUrl;
+        // If a new file was selected, pass the File; otherwise omit (keep existing image)
+        if (selectedFile) {
+          updatePayload.productImage = selectedFile;
         }
 
-        const updated = await productApi.update(
-          targetProductId,
-          updatePayload,
-          accessToken,
-        );
+        const updated = await productApi.update(mongoId, updatePayload, accessToken);
         toast.success("Product updated successfully");
-        onSave(mapBackendProductToProduct(updated));
+
+        // Bust image cache: append a timestamp query param so the browser fetches the new URL
+        const freshProduct = mapBackendProductToProduct(updated);
+        if (freshProduct.productImage && selectedFile) {
+          const sep = freshProduct.productImage.includes("?") ? "&" : "?";
+          freshProduct.productImage = `${freshProduct.productImage}${sep}t=${Date.now()}`;
+        }
+
+        onSave(freshProduct);
         if (refreshProducts) await refreshProducts();
         setOpen(false);
       } catch (err: unknown) {
-        if (err instanceof ApiError && err.status === 404) {
-          // Backend note §4: fallback if PATCH is not wired at all on the router
-          onSave(draft);
-          toast.info(
-            "Backend route PATCH /products/:id is not wired yet; updated in local catalog preview.",
-          );
-          setOpen(false);
+        if (err instanceof ApiError) {
+          if (err.status === 401) {
+            toast.error("Session expired. Please log in again.");
+            navigate({ to: "/login" });
+            return;
+          }
+          if (err.status === 403) {
+            toast.error("You can only edit your own products.");
+            return;
+          }
+          toast.error(err.message || "Failed to update product");
         } else {
-          const msg =
-            err instanceof ApiError
-              ? err.message
-              : (err as Error)?.message || "Failed to update product";
-          toast.error(msg);
+          toast.error((err as Error)?.message || "Failed to update product");
         }
       } finally {
         setIsSaving(false);
@@ -422,7 +433,9 @@ export function ProductDialog({
         </DialogHeader>
         <div className="grid gap-5 py-2 md:grid-cols-[210px_1fr]">
           <div>
-            <Label>Product image *</Label>
+            <Label>
+              Product image{product ? " (optional — click to replace)" : " *"}
+            </Label>
             <input
               type="file"
               ref={fileInputRef}
@@ -463,6 +476,12 @@ export function ProductDialog({
                 title={selectedFile.name}
               >
                 📁 {selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
+              </p>
+            )}
+
+            {imageError && (
+              <p className="mt-1 text-[11px] font-medium text-destructive">
+                ⚠ {imageError}
               </p>
             )}
 

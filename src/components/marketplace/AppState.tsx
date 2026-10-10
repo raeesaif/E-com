@@ -574,6 +574,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshCart = useCallback(async () => {
+    const token = accessToken || window.localStorage.getItem("market-access-token");
+    if (!token) return;
+    const backendCart = await cartApi.get(token);
+    const mapped = mapBackendCartToCartLines(backendCart);
+    setCart(mapped);
+    window.localStorage.setItem("market-cart", JSON.stringify(mapped));
+  }, [accessToken]);
+
   const hasFetchedInitialProducts = useRef(false);
 
   const refreshProducts = useCallback(async (options: { forceRefresh?: boolean } = {}) => {
@@ -620,6 +629,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       updateQuantity,
       removeFromCart,
       clearCart,
+      refreshCart,
       saveProduct,
       deleteProduct,
       wishlist,
@@ -657,6 +667,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       updateQuantity,
       removeFromCart,
       clearCart,
+      refreshCart,
       saveProduct,
       deleteProduct,
       wishlist,

@@ -25,6 +25,8 @@ export interface AppStateValue {
   updateQuantity: (id: string, quantity: number) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;
+  /** Re-fetch the cart from the backend (e.g. after checkout empties it). */
+  refreshCart: () => Promise<void>;
   products: Product[];
   saveProduct: (product: Product) => void;
   deleteProduct: (id: string) => void;
