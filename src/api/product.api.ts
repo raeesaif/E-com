@@ -1,30 +1,108 @@
+import axios from "axios";
 import { apiFormRequest, apiRequest } from "./client";
-import type { Product } from "@/lib/marketplace";
+import type { Product as UiProduct } from "@/lib/marketplace";
 import { categoryApi } from "./category.api";
 
-export interface BackendSeller {
-  _id?: string;
-  storeName?: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
+const API_BASE = (
+  (typeof import.meta !== "undefined" && import.meta.env?.["VITE_API_URL"]) ||
+  "http://localhost:5050/api/v1"
+).replace(/\/+$/, "");
+
+export interface Category {
+  _id: string;
+  name: string;
+  description?: string;
+  active?: boolean;
 }
 
-export interface BackendProduct {
+export interface Seller {
+  _id: string;
+  storeName: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface Product {
   _id: string;
   productId: string;
   name: string;
   description: string;
-  category: string | { _id: string; name?: string };
-  seller: string | BackendSeller;
   price: number;
-  discount?: number;
+  discount: number;
   stock: number;
+  isFeatured?: boolean;
   productImage: string;
   productImagePublicId?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  category: Category | string;
+  seller: Seller | string;
+  createdAt: string;
+  updatedAt: string;
 }
+
+export type BackendProduct = Product;
+export type BackendSeller = Seller;
+
+export interface Pagination {
+  page: number;
+  limit: number;
+  totalDocuments: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface ProductsResponse {
+  success: boolean;
+  message: string;
+  data: Product[];
+  pagination: Pagination;
+}
+
+export interface ProductFilterParams {
+  page?: number;
+  limit?: number;
+  category?: string;
+  availability?: "all" | "inStock" | "outOfStock";
+  maxPrice?: number;
+  minPrice?: number;
+  search?: string;
+  sort?: "low-to-high" | "high-to-low" | "featured" | "newest";
+  featured?: boolean;
+}
+
+export const fetchProducts = async (
+  params: ProductFilterParams = {},
+): Promise<ProductsResponse> => {
+  const queryParams = new URLSearchParams();
+
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.category && params.category !== "All" && params.category !== "all") {
+    queryParams.append("category", params.category);
+  }
+  if (params.availability && params.availability !== "all") {
+    queryParams.append("availability", params.availability);
+  }
+  if (params.maxPrice !== undefined && params.maxPrice !== null && !isNaN(Number(params.maxPrice))) {
+    queryParams.append("maxPrice", params.maxPrice.toString());
+  }
+  if (params.minPrice !== undefined && params.minPrice !== null && !isNaN(Number(params.minPrice))) {
+    queryParams.append("minPrice", params.minPrice.toString());
+  }
+  if (params.search?.trim()) {
+    queryParams.append("search", params.search.trim());
+  }
+  if (params.sort) queryParams.append("sort", params.sort);
+  if (params.featured !== undefined) {
+    queryParams.append("featured", String(params.featured));
+  }
+
+  const response = await axios.get<ProductsResponse>(
+    `${API_BASE}/products?${queryParams.toString()}`,
+  );
+  return response.data;
+};
 
 export interface CreateProductPayload {
   name: string;
@@ -53,7 +131,7 @@ export interface ApiEnvelope<T> {
   data: T;
 }
 
-export function mapBackendProductToProduct(bp: BackendProduct): Product {
+export function mapBackendProductToProduct(bp: Product | BackendProduct): UiProduct {
   const sellerObj = typeof bp.seller === "object" && bp.seller !== null ? bp.seller : null;
   const storeName =
     sellerObj?.storeName?.trim() ||
@@ -111,6 +189,7 @@ export function mapBackendProductToProduct(bp: BackendProduct): Product {
     price: bp.price,
     discount: bp.discount ?? 0,
     stock: bp.stock,
+    isFeatured: bp.isFeatured,
     imagePosition: "0% 0%",
     productImage: bp.productImage,
     productImagePublicId: bp.productImagePublicId,
@@ -130,6 +209,7 @@ const singleProductCache = new Map<string, CacheEntry<BackendProduct>>();
 const inFlightRequests = new Map<string, Promise<any>>();
 
 export const productApi = {
+  fetchProducts,
   invalidateCache: () => {
     productsListCache = null;
     singleProductCache.clear();

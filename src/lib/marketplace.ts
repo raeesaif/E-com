@@ -13,23 +13,24 @@ export interface ProductSellerDetails {
 
 export interface Product {
   id: string;
-  _id?: string;
-  productId?: string;
+  _id?: string | undefined;
+  productId?: string | undefined;
   name: string;
   seller: string;
-  storeName?: string;
-  sellerDetails?: ProductSellerDetails;
+  storeName?: string | undefined;
+  sellerDetails?: ProductSellerDetails | undefined;
   category: string;
-  categoryId?: string;
+  categoryId?: string | undefined;
   description: string;
   price: number;
   discount: number;
   stock: number;
-  imagePosition?: string;
-  productImage?: string;
-  productImagePublicId?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  isFeatured?: boolean | undefined;
+  imagePosition?: string | undefined;
+  productImage?: string | undefined;
+  productImagePublicId?: string | undefined;
+  createdAt?: string | undefined;
+  updatedAt?: string | undefined;
 }
 
 export interface OrderItem {
